@@ -29,10 +29,10 @@ from insightface.app import FaceAnalysis
 
 # ------------------ Default ------------------
 DEFAULT_DATA_ROOT   = "/home/marqs/Bilder/pBook"
-DEFAULT_WORKDIR     = "./arcface_work"
-EMB_PKL             = "embeddings_new.pkl"
-PROC_JSONL          = "processed.jsonl"
-MODEL_PKL           = "face_knn_arcface_new.pkl"
+DEFAULT_WORKDIR     = "./arcface_work-ppic"
+EMB_PKL             = "embeddings_ppic.pkl"
+PROC_JSONL          = "processed-ppic.jsonl"
+MODEL_PKL           = "face_knn_arcface_ppic.pkl"
 
 MIN_WIDTH           = 40
 MIN_HEIGHT          = 40
