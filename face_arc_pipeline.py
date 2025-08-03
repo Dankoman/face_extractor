@@ -167,8 +167,12 @@ def compute_embedding(app: FaceAnalysis,
     if w < MIN_WIDTH or h < MIN_HEIGHT:
         return None, 0, False
 
+    # Upsample om flaggad
     if allow_upsample:
-        img_rgb = upsample_if_needed(img_rgb)
+        try:
+            img_rgb = upsample_if_needed(img_rgb)
+        except Exception:
+            return None, 0, False
 
     bgr = rgb_to_bgr(img_rgb)
     faces = app.get(bgr)
@@ -177,9 +181,27 @@ def compute_embedding(app: FaceAnalysis,
 
     face = faces[0]
     x1, y1, x2, y2 = face.bbox.astype(int)
-    face_crop = bgr[y1:y2, x1:x2]
+    # Begränsa box till bildens gränser
+    x1 = max(x1, 0)
+    y1 = max(y1, 0)
+    x2 = min(x2, w)
+    y2 = min(y2, h)
+    if x2 <= x1 or y2 <= y1:
+        return None, 1, False
 
-    blob = cv2.dnn.blobFromImage(face_crop, 1.0, (227, 227), (78.426, 87.768, 114.895), swapRB=False)
+    face_crop = bgr[y1:y2, x1:x2]
+    if face_crop.size == 0:
+        return None, 1, False
+
+    # Generera blob för köns-CNN
+    try:
+        blob = cv2.dnn.blobFromImage(
+            face_crop, 1.0, (227, 227),
+            (78.426, 87.768, 114.895), swapRB=False
+        )
+    except Exception:
+        return None, 1, False
+
     gender_net.setInput(blob)
     preds = gender_net.forward()[0]
     female_prob = float(preds[1])
@@ -191,7 +213,6 @@ def compute_embedding(app: FaceAnalysis,
         return None, 1, False
 
     return emb.astype(np.float32), 1, False
-
 
 # ----------------- Pipeline -----------------
 
