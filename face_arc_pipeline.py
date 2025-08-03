@@ -9,10 +9,7 @@ ArcFace-pipeline med progressbar & checkpoints.
 - Fallback: om ingen detektion -> direkt embedding på 112x112 (valbart)
 - Sparar embeddings + etiketter i embeddings.pkl
 - Tränar KNN (cosine) och sparar modell i face_knn_arcface.pkl
-- Checkpoints: processed.jsonl + embeddings.pkl så du kan avbryta/fortsätta
-
-Exempel:
-  python face_arc_pipeline.py --mode both --data-root /home/marqs/Bilder/pr0n/Faces
+- Checkpoints: processed.jsonl + embeddings.pkl så 
 """
 
 import sys
@@ -48,9 +45,15 @@ MIN_PER_CLASS_DEF   = 2
 
 # -------------- Hjälpfunktioner --------------
 def init_app(providers: List[str]) -> FaceAnalysis:
-    app = FaceAnalysis(name="buffalo_l", providers=providers)
+    # Lägg till allowed_modules för att även få med gender-age
+    app = FaceAnalysis(
+        name="buffalo_l",
+        providers=providers,
+        allowed_modules=['detection','recognition','genderage']
+    )
     app.prepare(ctx_id=0)
     return app
+
 
 def load_processed(proc_path: Path) -> set:
     done = set()
@@ -64,9 +67,11 @@ def load_processed(proc_path: Path) -> set:
                     pass
     return done
 
+
 def append_processed(proc_path: Path, img_path: str, ok: bool) -> None:
     with proc_path.open("a", encoding="utf-8") as f:
         f.write(json.dumps({"path": img_path, "ok": ok}) + "\n")
+
 
 def load_embeddings(emb_path: Path) -> Tuple[List[np.ndarray], List[str]]:
     if not emb_path.exists():
@@ -75,15 +80,15 @@ def load_embeddings(emb_path: Path) -> Tuple[List[np.ndarray], List[str]]:
         data = pickle.load(f)
     return data["X"], data["y"]
 
-def save_embeddings(emb_path: Path, X, y):
-    """Sparar embeddings till en temporär fil och byter namn."""
-    emb_path = Path(emb_path)  # Se till att emb_path är en Path-objekt
-    emb_path.parent.mkdir(parents=True, exist_ok=True)  # Skapa mappen om den inte finns
 
+def save_embeddings(emb_path: Path, X, y):
+    emb_path = Path(emb_path)
+    emb_path.parent.mkdir(parents=True, exist_ok=True)
     tmp = emb_path.with_suffix(".tmp")
     with tmp.open("wb") as f:
         pickle.dump({"X": X, "y": y}, f)
     tmp.rename(emb_path)
+
 
 def iter_images(root: Path):
     exts = {".jpg", ".jpeg", ".png", ".bmp"}
@@ -95,6 +100,7 @@ def iter_images(root: Path):
             if p.suffix.lower() in exts:
                 yield str(p), label
 
+
 def load_image_rgb(path: str) -> Optional[np.ndarray]:
     try:
         img = Image.open(path).convert("RGB")
@@ -102,8 +108,10 @@ def load_image_rgb(path: str) -> Optional[np.ndarray]:
         return None
     return np.array(img)  # RGB
 
+
 def rgb_to_bgr(arr: np.ndarray) -> np.ndarray:
     return arr[:, :, ::-1]
+
 
 def upsample_if_needed(img_rgb: np.ndarray) -> np.ndarray:
     h, w = img_rgb.shape[:2]
@@ -115,8 +123,8 @@ def upsample_if_needed(img_rgb: np.ndarray) -> np.ndarray:
     new_h = int(round(h * scale))
     return np.array(Image.fromarray(img_rgb).resize((new_w, new_h), Image.BICUBIC))
 
+
 def get_embedding_direct(rec_model, img_rgb: np.ndarray) -> Optional[np.ndarray]:
-    """Direkt embedding (bypass detektor). Resize → 112x112."""
     if img_rgb is None:
         return None
     img_112 = Image.fromarray(img_rgb).resize((112, 112), Image.BICUBIC)
@@ -135,50 +143,37 @@ def compute_embedding(app: FaceAnalysis,
                       allow_upsample: bool) -> tuple[Optional[np.ndarray], int, bool]:
     """
     Returnerar (embedding, antal_ansikten, fallback_användes).
-
-    Logik:
-      1) Om bilden är < MIN_* -> om fallback tillåts: direkt embedding, annars None.
-      2) Detektera på original.
-      3) Om 0 ansikten och allow_upsample: upsampla och detektera igen.
-      4) Om fortfarande 0 och allow_fallback: direkt embedding.
-      5) Acceptera endast exakt 1 ansikte (oavsett metod).
+    Endast om exakt 1 ansikte hittas och det är en kvinna returneras embedding.
     """
     img_rgb = load_image_rgb(img_path)
     if img_rgb is None:
         return None, 0, False
 
     h, w = img_rgb.shape[:2]
+    # Skippa för små bilder – ingen detektion
     if w < MIN_WIDTH or h < MIN_HEIGHT:
-        if allow_fallback:
-            emb = get_embedding_direct(rec_model, img_rgb)
-            return (emb, 1 if emb is not None else 0, True)
         return None, 0, False
 
-    # 1) Detektera
-    img_bgr = rgb_to_bgr(img_rgb)
-    faces = app.get(img_bgr)
+    # 1) Detektera ansikten
+    bgr = rgb_to_bgr(img_rgb)
+    faces = app.get(bgr)
     n_faces = len(faces)
 
-    # 2) Upsample
-    if n_faces == 0 and allow_upsample:
-        img_up = upsample_if_needed(img_rgb)
-        if img_up is not img_rgb:
-            faces = app.get(rgb_to_bgr(img_up))
-            n_faces = len(faces)
-
-    # 3) Fallback
-    if n_faces == 0 and allow_fallback:
-        emb = get_embedding_direct(rec_model, img_rgb)
-        return (emb, 1 if emb is not None else 0, True)
-
+    # 2) Endast 1 ansikte accepteras
     if n_faces != 1:
         return None, n_faces, False
 
-    emb = faces[0].embedding
-    if emb is None or emb.size == 0:
-        return None, n_faces, False
+    face = faces[0]
+    # 3) Filtrera på kön (1 = kvinna)
+    if getattr(face, 'gender', None) != 1:
+        return None, 1, False
 
-    return emb.astype(np.float32), n_faces, False
+    # 4) Hämta embedding
+    emb = face.embedding
+    if emb is None or emb.size == 0:
+        return None, 1, False
+
+    return emb.astype(np.float32), 1, False
 
 
 # ----------------- Pipeline -----------------
@@ -190,7 +185,7 @@ def encode(args) -> None:
     emb_path  = workdir / EMB_PKL
     proc_path = workdir / PROC_JSONL
 
-    X, y = load_embeddings(emb_path)
+    X, y      = load_embeddings(emb_path)
     processed = load_processed(proc_path)
 
     all_imgs = list(iter_images(data_root))
@@ -216,7 +211,8 @@ def encode(args) -> None:
                     allow_fallback=args.allow_fallback,
                     allow_upsample=args.allow_upsample
                 )
-                if emb is not None and n == 1:
+                # emb är endast satt om exakt 1 kvinna detekterats
+                if emb is not None:
                     X.append(emb)
                     y.append(label)
                     ok = True
@@ -267,12 +263,12 @@ def train(args) -> None:
 
 # ------------------ CLI ---------------------
 def main():
-    global EMB_PKL  # Flytta global-deklarationen hit
+    global EMB_PKL
 
     ap = argparse.ArgumentParser(description="ArcFace-pipeline (progressbar + checkpoints, fallback & upsampling)")
     ap.add_argument("--data-root", default=DEFAULT_DATA_ROOT, help="Rotmapp med personmappar")
     ap.add_argument("--workdir",   default=DEFAULT_WORKDIR,   help="Arbetsmapp/checkpoints")
-    ap.add_argument("--embeddings", default=EMB_PKL,          help="Fil med embeddings (.pkl)")  # Nytt argument
+    ap.add_argument("--embeddings", default=EMB_PKL,          help="Fil med embeddings (.pkl)")
     ap.add_argument("--model-out", default=MODEL_PKL,         help="Filnamn för sparad modell (.pkl)")
     ap.add_argument("--mode", choices=["encode", "train", "both"], default="both")
     ap.add_argument("--flush-every", type=int, default=200, help="Spara embeddings var N:e lyckade bild")
@@ -287,7 +283,7 @@ def main():
 
     args = ap.parse_args()
 
-    EMB_PKL = args.embeddings  # Uppdatera den globala variabeln
+    EMB_PKL = args.embeddings
 
     if args.mode in ("encode", "both"):
         encode(args)
