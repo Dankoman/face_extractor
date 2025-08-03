@@ -3,3 +3,5 @@
 static
 uploads
 arcface_work-ppic/*.jsonl
+models/deploy_gender.prototxt
+models/gender_net.caffemodel

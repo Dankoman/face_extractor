@@ -9,7 +9,7 @@ ArcFace-pipeline med progressbar & checkpoints.
 - Fallback: om ingen detektion -> direkt embedding på 112x112 (valbart)
 - Sparar embeddings + etiketter i embeddings.pkl
 - Tränar KNN (cosine) och sparar modell i face_knn_arcface.pkl
-- Checkpoints: processed.jsonl + embeddings.pkl så 
+- Checkpoints: processed.jsonl + embeddings.pkl
 """
 
 import sys
@@ -19,6 +19,7 @@ import argparse
 from pathlib import Path
 from typing import List, Tuple, Optional
 
+import cv2
 import numpy as np
 from PIL import Image
 from tqdm.auto import tqdm
@@ -26,6 +27,10 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.neighbors import KNeighborsClassifier
 
 from insightface.app import FaceAnalysis
+
+# Dynamisk sökväg till script-katalogen för modeller
+SCRIPT_DIR = Path(__file__).resolve().parent
+MODELS_DIR = SCRIPT_DIR / "models"
 
 # ------------------ Default ------------------
 DEFAULT_DATA_ROOT   = "/home/marqs/Bilder/pBook"
@@ -42,10 +47,18 @@ K_DEFAULT           = 3
 MIN_PER_CLASS_DEF   = 2
 # ---------------------------------------------
 
+# ---------------- Gender-CNN ------------------
+GENDER_PROTO = str(MODELS_DIR / "deploy_gender.prototxt")
+GENDER_MODEL = str(MODELS_DIR / "gender_net.caffemodel")
+# Läs in köns-CNN först
+gender_net = cv2.dnn.readNetFromCaffe(GENDER_PROTO, GENDER_MODEL)
+GENDER_LIST  = ["Male", "Female"]
+FEMALE_THRESH = 0.7
+# ---------------------------------------------
 
 # -------------- Hjälpfunktioner --------------
+
 def init_app(providers: List[str]) -> FaceAnalysis:
-    # Lägg till allowed_modules för att även få med gender-age
     app = FaceAnalysis(
         name="buffalo_l",
         providers=providers,
@@ -106,7 +119,7 @@ def load_image_rgb(path: str) -> Optional[np.ndarray]:
         img = Image.open(path).convert("RGB")
     except Exception:
         return None
-    return np.array(img)  # RGB
+    return np.array(img)
 
 
 def rgb_to_bgr(arr: np.ndarray) -> np.ndarray:
@@ -136,6 +149,7 @@ def get_embedding_direct(rec_model, img_rgb: np.ndarray) -> Optional[np.ndarray]
 
 
 # ----------- Embedding-funktion -----------
+
 def compute_embedding(app: FaceAnalysis,
                       rec_model,
                       img_path: str,
@@ -143,32 +157,35 @@ def compute_embedding(app: FaceAnalysis,
                       allow_upsample: bool) -> tuple[Optional[np.ndarray], int, bool]:
     """
     Returnerar (embedding, antal_ansikten, fallback_användes).
-    Endast om exakt 1 ansikte hittas och det är en kvinna returneras embedding.
+    Endast om exakt 1 ansikte hittas och det klassificeras som kvinna returneras embedding.
     """
     img_rgb = load_image_rgb(img_path)
     if img_rgb is None:
         return None, 0, False
 
     h, w = img_rgb.shape[:2]
-    # Skippa för små bilder – ingen detektion
     if w < MIN_WIDTH or h < MIN_HEIGHT:
         return None, 0, False
 
-    # 1) Detektera ansikten
+    if allow_upsample:
+        img_rgb = upsample_if_needed(img_rgb)
+
     bgr = rgb_to_bgr(img_rgb)
     faces = app.get(bgr)
-    n_faces = len(faces)
-
-    # 2) Endast 1 ansikte accepteras
-    if n_faces != 1:
-        return None, n_faces, False
+    if len(faces) != 1:
+        return None, len(faces), False
 
     face = faces[0]
-    # 3) Filtrera på kön (1 = kvinna)
-    if getattr(face, 'gender', None) != 1:
+    x1, y1, x2, y2 = face.bbox.astype(int)
+    face_crop = bgr[y1:y2, x1:x2]
+
+    blob = cv2.dnn.blobFromImage(face_crop, 1.0, (227, 227), (78.426, 87.768, 114.895), swapRB=False)
+    gender_net.setInput(blob)
+    preds = gender_net.forward()[0]
+    female_prob = float(preds[1])
+    if female_prob < FEMALE_THRESH:
         return None, 1, False
 
-    # 4) Hämta embedding
     emb = face.embedding
     if emb is None or emb.size == 0:
         return None, 1, False
@@ -177,6 +194,7 @@ def compute_embedding(app: FaceAnalysis,
 
 
 # ----------------- Pipeline -----------------
+
 def encode(args) -> None:
     data_root = Path(args.data_root)
     workdir   = Path(args.workdir)
@@ -211,7 +229,6 @@ def encode(args) -> None:
                     allow_fallback=args.allow_fallback,
                     allow_upsample=args.allow_upsample
                 )
-                # emb är endast satt om exakt 1 kvinna detekterats
                 if emb is not None:
                     X.append(emb)
                     y.append(label)
@@ -220,7 +237,6 @@ def encode(args) -> None:
                 print(f"❌ {path}: {e}", file=sys.stderr)
 
             append_processed(proc_path, path, ok)
-
             if ok and (len(X) % args.flush_every == 0):
                 save_embeddings(emb_path, X, y)
 
@@ -261,7 +277,6 @@ def train(args) -> None:
     print(f"✅ Modell sparad: {model_out} (k={k}, klasser={len(np.unique(y))})")
 
 
-# ------------------ CLI ---------------------
 def main():
     global EMB_PKL
 
@@ -282,7 +297,6 @@ def main():
                     help="Upsampla små bilder innan ny detektionskörning")
 
     args = ap.parse_args()
-
     EMB_PKL = args.embeddings
 
     if args.mode in ("encode", "both"):
