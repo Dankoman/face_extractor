@@ -2,3 +2,4 @@
 *.pkl
 static
 uploads
+arcface_work-ppic/*.jsonl
