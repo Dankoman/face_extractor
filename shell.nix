@@ -16,6 +16,8 @@ pkgs.mkShell {
     pkgs.boost pkgs.eigen
     pkgs.curl pkgs.openssl pkgs.git pkgs.zlib
     pkgs.dejavu_fonts
+    pkgs.tmux
+    pkgs.byobu
   ];
 
   shellHook = ''

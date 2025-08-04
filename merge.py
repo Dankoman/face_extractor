@@ -4,8 +4,8 @@ from pathlib import Path
 
 # Filvägar
 MERGE_FILE = "merge.txt"
-EMBEDDINGS_FILE = "arcface_work/embeddings.pkl"
-OUTPUT_FILE = "arcface_work/embeddings_merged.pkl"
+EMBEDDINGS_FILE = "arcface_work-ppic/embeddings_ppic.pkl"
+OUTPUT_FILE = "arcface_work-ppic/embeddings_ppic_merged.pkl"
 
 def load_alias_map(merge_file: str) -> dict:
     """Läser merge.txt och skapar en alias-mappning."""
