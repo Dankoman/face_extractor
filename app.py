@@ -19,7 +19,7 @@ app_insight = FaceAnalysis(name="buffalo_l", providers=["CPUExecutionProvider"])
 app_insight.prepare(ctx_id=0)
 
 # Ladda KNN-modellen
-MODEL_PATH = "face_knn_arcface_new.pkl"
+MODEL_PATH = "arcface_work-ppic/face_knn_arcface_ppic.pkl"
 with open(MODEL_PATH, "rb") as f:
     bundle = pickle.load(f)
 clf = bundle["model"]

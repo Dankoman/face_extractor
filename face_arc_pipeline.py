@@ -236,24 +236,41 @@ def train(args) -> None:
     Tränar KNN på embeddings.
     args.embeddings kan vara absolut eller relativ stig till pkl-fil.
     """
-    # Använd direkt path från --embeddings
+    # Läs in embeddings-fil direkt från argumentet
     emb_path = Path(args.embeddings)
     if not emb_path.exists():
         print(f"❌ Embeddings-filen hittades inte: {emb_path}"); sys.exit(1)
-    model_out = Path(args.model_out)
-    workdir=Path(args.workdir); emb_path=workdir/EMB_PKL; model_out=Path(args.model_out)
-    X_list,y_list=load_embeddings(emb_path)
+
+    # Ladda embeddings
+    X_list, y_list = load_embeddings(emb_path)
     if not X_list:
         print("❌ Inga embeddings – kör encode först."); sys.exit(1)
-    X=np.vstack(X_list); y=np.array(y_list)
-    le=LabelEncoder(); y_enc=le.fit_transform(y)
-    counts={cls:np.sum(y==cls) for cls in np.unique(y)};k=1 if min(counts.values())<args.min_per_class else args.k
-    clf=KNeighborsClassifier(n_neighbors=k,weights="distance",metric="cosine");clf.fit(X,y_enc)
-    with model_out.open("wb") as f: pickle.dump({"model":clf,"label_encoder":le},f)
+
+    # Stacka och koda etiketter
+    X = np.vstack(X_list)
+    y = np.array(y_list)
+    le = LabelEncoder()
+    y_enc = le.fit_transform(y)
+
+    # Bestäm k baserat på minsta klassstorlek
+    counts = {cls: np.sum(y == cls) for cls in np.unique(y)}
+    k = 1 if min(counts.values()) < args.min_per_class else args.k
+
+    # Träna KNN
+    clf = KNeighborsClassifier(n_neighbors=k, weights="distance", metric="cosine")
+    clf.fit(X, y_enc)
+
+    # Spara modell
+    model_out = Path(args.model_out)
+    model_out.parent.mkdir(parents=True, exist_ok=True)
+    with model_out.open("wb") as f:
+        pickle.dump({"model": clf, "label_encoder": le}, f)
+
     print(f"✅ Modell sparad: {model_out} (k={k}, klasser={len(np.unique(y))})")
 
 
 def main():
+    global EMB_PKL
     global EMB_PKL
     ap=argparse.ArgumentParser(description="ArcFace-pipeline (encode/train, fallback & upsampling)")
     ap.add_argument("--data-root",default=DEFAULT_DATA_ROOT)

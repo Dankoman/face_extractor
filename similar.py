@@ -2,7 +2,7 @@ import pickle, numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 from collections import defaultdict
 
-data = pickle.load(open("/home/marqs/Programmering/Python/3.11/face_extractor/arcface_work-ppic/embeddings_ppic.pkl","rb"))
+data = pickle.load(open("arcface_work-ppic/embeddings_ppic_merged.pkl","rb"))
 X = np.vstack(data["X"])              # (N, 512)
 y = np.array(data["y"])               # etiketter (mappnamn)
 
