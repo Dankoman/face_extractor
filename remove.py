@@ -1,12 +1,12 @@
 import pickle
 
-fn = "arcface_work-ppic/embeddings_ppic_merged.pkl"
+fn = "arcface_work-ppic/embeddings_ppic.pkl"
 with open(fn, "rb") as f:
     data = pickle.load(f)
 X, y = data["X"], data["y"]
 
 keep_idx = [i for i, lbl in enumerate(y)
-            if lbl not in ("Avena Segal", "Tea")]
+            if lbl not in ("Eric Masterson")]
 X_new = [X[i] for i in keep_idx]
 y_new = [y[i] for i in keep_idx]
 
