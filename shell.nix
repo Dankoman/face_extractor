@@ -31,7 +31,7 @@ pkgs.mkShell {
     source .venv/bin/activate
 
     pip install --upgrade pip
-    pip install --no-cache-dir onnxruntime insightface opencv-python-headless==4.12.0.88 numpy flask
+    pip install --no-cache-dir onnxruntime insightface opencv-python-headless==4.12.0.88 numpy flask flask-cors
 
     echo "✅ Virtuell miljö aktiv. Kör: python face_arc_pipeline.py --mode both"
   '';
