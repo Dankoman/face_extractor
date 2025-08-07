@@ -6,7 +6,7 @@ with open(fn, "rb") as f:
 X, y = data["X"], data["y"]
 
 keep_idx = [i for i, lbl in enumerate(y)
-            if lbl not in ("Eric Masterson")]
+            if lbl not in ("Chris Strokes")]
 X_new = [X[i] for i in keep_idx]
 y_new = [y[i] for i in keep_idx]
 
