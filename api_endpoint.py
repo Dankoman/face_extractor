@@ -5,7 +5,7 @@ Face Extractor – API + web UI + bildproxy (samlad i EN fil)
 -----------------------------------------------------------
 - /recognize      : topp‑K ansiktsigenkänning. Tar råbytes (clipboard/drag & drop) eller multipart 'image'.
 - /web            : enkelt test-UI (klistra in, dra‑och‑släpp, välj fil). Ritar bbox och listar topp‑3.
-- /resolve_image  : hämtar profilbilder via backend (lokal Stash → StashDB) med cache, timeout och retry.
+- /resolve_image  : hämtar profilbilder via backend (lokal Stash → StashDB) **utan cache**, timeout och retry.
                     Standard: 302‑redirect till bildens URL (passar direkt som <img src>).
                     Lägg ?format=json för JSON, eller ?format=bytes för att returnera själva bildbytes (CSP‑vänligt).
 - /api/health, /api/config, index → /web
@@ -56,7 +56,7 @@ le = bundle["label_encoder"]
 THRESHOLD = 0.2  # legacy
 
 # -------------------------------------------------
-# Proxy‑konfiguration (env) + enkel cache
+# Proxy‑konfiguration (env)
 # -------------------------------------------------
 STASH_URL = os.environ.get("STASH_URL", "http://127.0.0.1:9999").rstrip("/")
 STASH_GRAPHQL = f"{STASH_URL}/graphql"
@@ -105,32 +105,6 @@ def _mask(token: str | None) -> str:
     if not token:
         return "<none>"
     return token[:6] + "..." + token[-4:]
-
-
-class SimpleCache:
-    def __init__(self, max_items: int = 512, ttl_seconds: int = 3600):
-        self.max = max_items
-        self.ttl = ttl_seconds
-        self.store: dict[str, tuple[float, Optional[str]]] = {}
-
-    def get(self, key: str) -> Optional[str]:
-        hit = self.store.get(key)
-        if not hit:
-            return None
-        ts, val = hit
-        if (time.time() - ts) > self.ttl:
-            self.store.pop(key, None)
-            return None
-        return val
-
-    def set(self, key: str, val: Optional[str]):
-        if len(self.store) >= self.max:
-            oldest_key = min(self.store.keys(), key=lambda k: self.store[k][0])
-            self.store.pop(oldest_key, None)
-        self.store[key] = (time.time(), val)
-
-
-img_cache = SimpleCache(max_items=1024, ttl_seconds=3600)
 
 # -------------------------------------------------
 # Igenkänning (hjälpare)
@@ -183,7 +157,6 @@ def _gql_post_json(ep: str, headers: dict, query: str, variables: dict | None = 
             print(f"[stashdb] HTTP {r.status_code}: {r.text[:400]}")
         r.raise_for_status()
     return r.json()
-
 
 _schema_caps_cache: Optional[dict] = None
 
@@ -243,21 +216,26 @@ def _extract_first_image(perf: Dict[str, Any]) -> Optional[str]:
 
 
 def _select_exact(perfs: list[dict], name: str) -> Optional[dict]:
-    lname = name.lower()
+    """Case‑insensitiv exaktmatch mot name eller aliases.
+    Tar även höjd för att inparametern kan vara citerad ("Namn").
+    """
+    lname = name.strip().strip('"').lower()
     for p in perfs:
-        if (p.get('name') or '').lower() == lname:
+        if (p.get('name') or '').strip().lower() == lname:
             return p
-        aliases = [a.lower() for a in (p.get('aliases') or [])]
+        aliases = [(a or '').strip().lower() for a in (p.get('aliases') or [])]
         if lname in aliases:
             return p
     return None
 
 
 # -------------------------------------------------
-# Bildproxy lookups
+# Bildproxy lookups – **strikt exaktmatch**, ingen cache
 # -------------------------------------------------
 
 def _lookup_local_stash_image(name: str) -> Optional[str]:
+    """Sök i lokal Stash med strikt exaktmatch (case‑insensitivt) på name/alias.
+    Ingen fallback till CONTAINS."""
     local_headers = {"ApiKey": STASH_API_KEY} if STASH_API_KEY else None
 
     gql_equals = """
@@ -267,44 +245,33 @@ def _lookup_local_stash_image(name: str) -> Optional[str]:
           name:{value:$name,modifier:EQUALS},
           aliases:{value:$name,modifier:EQUALS}
         }}
-        filter:{ per_page:1 }
+        filter:{ per_page: 25 }
       ){
-        performers{ id name image_path images{ url } }
+        performers{ id name aliases image_path images{ url } }
       }
     }
     """
     data = _post_graphql(STASH_GRAPHQL, gql_equals, {"name": name}, headers=local_headers, timeout=5.0, retries=1)
-    p = (data or {}).get("data", {}).get("findPerformers", {}).get("performers") or []
+    perfs = (data or {}).get("data", {}).get("findPerformers", {}).get("performers") or []
 
-    if not p:
-        gql_contains = """
-        query FindPerformerImageCt($name:String!){
-          findPerformers(
-            performer_filter:{ name:{value:$name,modifier:CONTAINS} }
-            filter:{ per_page:1 }
-          ){
-            performers{ id name image_path images{ url } }
-          }
-        }
-        """
-        data2 = _post_graphql(STASH_GRAPHQL, gql_contains, {"name": name}, headers=local_headers, timeout=5.0, retries=1)
-        p = (data2 or {}).get("data", {}).get("findPerformers", {}).get("performers") or []
-
-    perf = p[0] if p else None
+    # Strikt urval
+    perf = _select_exact(perfs, name)
     if not perf:
         if DEBUG_IMAGES:
-            print(f"[resolve_image][local] miss: {name}")
+            print(f"[resolve_image][local] strict miss: {name}")
         return None
 
     images = perf.get("images") or []
     url = (images[0].get("url") if images else None) or perf.get("image_path")
     url = url if (url or '').startswith('http') else f"{STASH_URL}{url}" if url else None
     if DEBUG_IMAGES:
-        print(f"[resolve_image][local] hit: {name} -> {url}")
+        print(f"[resolve_image][local] strict hit: {name} -> {url}")
     return url
 
 
 def _lookup_stashdb_image(name: str, endpoint: Optional[str] = None, api_key: Optional[str] = None) -> Optional[str]:
+    """Sök i StashDB med strikt exaktmatch (case‑insensitivt) på name/alias.
+    Om ingen exaktmatch hittas returneras None."""
     global _schema_caps_cache
     api_key = api_key or STASHDB_API_KEY
     if not api_key:
@@ -322,7 +289,7 @@ def _lookup_stashdb_image(name: str, endpoint: Optional[str] = None, api_key: Op
         except Exception as e:
             if DEBUG_IMAGES:
                 print(f"[stashdb] introspection failed: {e}")
-            _schema_caps_cache = { 'has_queryPerformers': True, 'qp_accepts_input': True, 'input_fields': {'name':'String','alias':'String','per_page':'Int'} }
+            _schema_caps_cache = { 'has_queryPerformers': True, 'qp_accepts_input': True, 'input_fields': {'name':'String','alias':'String','names':'String','per_page':'Int','page':'Int'} }
 
     caps = _schema_caps_cache or {}
     if not (caps.get('has_queryPerformers') and caps.get('qp_accepts_input')):
@@ -337,25 +304,30 @@ def _lookup_stashdb_image(name: str, endpoint: Optional[str] = None, api_key: Op
                 print(f"[stashdb] HTTP {r.status_code}: {r.text[:300]}")
             return None
         try:
-            return r.json()
+            data = r.json()
+            if isinstance(data, dict) and data.get('errors'):
+                if DEBUG_IMAGES:
+                    print(f"[stashdb] GQL errors: {str(data['errors'])[:200]}")
+                return None
+            return data
         except Exception:
             if DEBUG_IMAGES:
                 print(f"[stashdb] non-json body: {r.text[:120]}")
             return None
 
-    # Kandidat-inputs baserat på faktiska fält
+    # Citerad sträng för exaktmatch (Stash‑Box: quoted => exact)
+    qname = f'"{name}"'
+
+    # Kandidat-inputs baserat på faktiska fält – öka per_page
     candidates = []
     def add_if(d: dict):
         obj = {k:v for k,v in d.items() if k in inp_fields}
         if obj and obj not in candidates:
             candidates.append(obj)
 
-    add_if({'name': name, 'per_page': 10})
-    add_if({'alias': name, 'per_page': 10})
-    add_if({'names': [name], 'per_page': 10})
-    add_if({'name': name})
-    add_if({'alias': name})
-    add_if({'names': [name]})
+    add_if({'name': qname, 'per_page': 40})
+    add_if({'alias': qname, 'per_page': 40})
+    add_if({'names': qname, 'per_page': 40})  # OBS: sträng, inte lista
 
     perfs: list[dict] = []
     q_tpl = """
@@ -372,7 +344,13 @@ def _lookup_stashdb_image(name: str, endpoint: Optional[str] = None, api_key: Op
     if not perfs:
         return None
 
-    p = _select_exact(perfs, name) or perfs[0]
+    # **Ingen fallback** – kräver exaktmatch
+    p = _select_exact(perfs, name)
+    if not p:
+        if DEBUG_IMAGES:
+            print(f"[resolve_image][stashdb] strict miss: {name}")
+        return None
+
     return _extract_first_image(p)
 
 
@@ -413,7 +391,7 @@ def recognize():
 
 
 # -------------------------------------------------
-# Bildproxy – lokal Stash → StashDB med cache
+# Bildproxy – lokal Stash → StashDB **utan cache**
 # -------------------------------------------------
 @app.get("/resolve_image")
 def resolve_image():
@@ -427,22 +405,10 @@ def resolve_image():
     stashdb_ep = (request.args.get("stashdb_endpoint") or STASHDB_ENDPOINT_DEFAULT).strip()
     #stashdb_key = (request.args.get("stashdb_api_key") or STASHDB_API_KEY).strip()
     stashdb_key = STASHDB_API_KEY.strip()
-    # (valfritt) logga om klienten försökte skicka en nyckel:
     if request.args.get("stashdb_api_key"):
         if DEBUG_IMAGES: print("[resolve_image] Ignoring client-supplied stashdb_api_key")
 
-    cache_key = f"{source}|{stashdb_ep}|{name.lower()}"
-    cached = img_cache.get(cache_key)
-    if cached is not None and fmt != "bytes":
-        # För 'bytes' vill vi alltid hämta färska bytes (eller separat byte‑cache om man vill bygga det).
-        if DEBUG_IMAGES:
-            print(f"[resolve_image] cache hit: {name} -> {cached}")
-        if fmt == "json":
-            return jsonify({"url": cached})
-        if cached:
-            return redirect(cached, code=302)
-        return Response(status=204)
-
+    # **Ingen cache** – alltid färsk uppslagning
     url: Optional[str] = None
     tried = []
 
@@ -452,13 +418,12 @@ def resolve_image():
 
     if not url and source in ("stashdb", "both"):
         tried.append("stashdb")
-        url = _lookup_stashdb_image(name, endpoint=stashdb_ep, api_key=stashdb_key)
-
-    # Cachea bara URL:en (inte bytes). För 'bytes' gör vi always‑fetch nedan.
-    img_cache.set(cache_key, url)
+        # Försök först med citerad (exakt), sedan ociterad
+        url = (_lookup_stashdb_image(f'"{name}"', endpoint=stashdb_ep, api_key=stashdb_key)
+               or _lookup_stashdb_image(name, endpoint=stashdb_ep, api_key=stashdb_key))
 
     if DEBUG_IMAGES:
-        print(f"[resolve_image] {name} -> {url} (tried: {','.join(tried)})")
+        print(f"[resolve_image] {name} -> {url} (strict; tried: {','.join(tried)})")
 
     if fmt == "json":
         return jsonify({"url": url})
@@ -472,9 +437,9 @@ def resolve_image():
         except Exception as e:
             return jsonify({"error": f"fetch failed: {e}"}), 502
         ctype = r.headers.get("Content-Type", "image/jpeg")
-        # Notera: här kan man lägga disk‑cache/ETag/If‑None‑Match om man vill
         return Response(r.content, status=200, headers={
             "Content-Type": ctype,
+            # client‑side cache är OK, men ingen server‑side mellanlagring
             "Cache-Control": "public, max-age=86400"
         })
 
@@ -635,7 +600,7 @@ def api_health():
     return jsonify({
         "status": "ok",
         "service": "face_extractor",
-        "version": "1.7.0",
+        "version": "1.8.0-strict-no-cache",
         "model_loaded": clf is not None,
         "classes": len(le.classes_) if hasattr(le, 'classes_') else None,
     })
@@ -675,7 +640,7 @@ if __name__ == "__main__":
     print("🚀 Startar Face Extractor API…")
     print("   /web                    – web UI (clipboard & drag/drop)")
     print("   POST /recognize?top_k=N – topp‑K API")
-    print("   GET  /resolve_image     – bildproxy (Stash/StashDB)")
+    print("   GET  /resolve_image     – bildproxy (Stash/StashDB, strikt, ingen cache)")
     print("   GET  /api/health        – hälsa")
     print("   GET/POST /api/config    – konfigurera")
     print("🌐 STASH_URL:", STASH_URL)
