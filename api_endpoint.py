@@ -168,6 +168,7 @@ def _introspect_stashdb_schema(endpoint: str, api_key: str) -> dict:
         "has_queryPerformers": False,
         "qp_accepts_input": False,
         "input_fields": {},  # name->type
+        "performer_fields": [],
     }
 
     # 1) Query‑fält
@@ -199,6 +200,20 @@ def _introspect_stashdb_schema(endpoint: str, api_key: str) -> dict:
                 if tn.get('name'): return tn['name']
                 return tname(tn.get('ofType'))
             caps['input_fields'][fld.get('name')] = tname(t)
+
+    # 3) Hämta performer-fält för att kunna forma svaren
+    q_perf = """
+    query __P { __type(name:"Performer"){ fields { name } } }
+    """
+    try:
+        d3 = _gql_post_json(endpoint, headers, q_perf)
+        perf_type = (((d3 or {}).get('data') or {}).get('__type') or {})
+        fields = perf_type.get('fields') or []
+        caps['performer_fields'] = [f.get('name') for f in fields if f.get('name')]
+    except Exception as exc:
+        if DEBUG_IMAGES:
+            print(f"[stashdb] performer field introspection failed: {exc}")
+
 
     if DEBUG_IMAGES:
         print("[stashdb] schema caps:", json.dumps(caps))
@@ -288,36 +303,92 @@ def _lookup_local_stash_image(name: str, alias_sink: Optional[list[str]] = None)
 
 
 
-def _lookup_stashdb_image(name: str, endpoint: Optional[str] = None, api_key: Optional[str] = None,
-                         extra_terms: Optional[Iterable[str]] = None) -> tuple[Optional[str], Optional[str]]:
-    """Sök i StashDB med strikt exaktmatch (case-insensitivt) på name.
-    Om ingen träff hittas på name görs en andra omgång mot alias-fältet.
-    Returnerar (url, matched_term) där matched_term är strängen som gav träff."""
+def _stashdb_search_exact(
+    name: str,
+    endpoint: Optional[str] = None,
+    api_key: Optional[str] = None,
+    extra_terms: Optional[Iterable[str]] = None,
+    requested_fields: Optional[Iterable[str]] = None,
+) -> tuple[Optional[dict], Optional[str]]:
+    """Strict lookup against StashDB that returns the performer dict plus the matched term."""
     global _schema_caps_cache
     api_key = api_key or STASHDB_API_KEY
     if not api_key:
         if DEBUG_IMAGES:
-            print(f"[resolve_image][stashdb] no API key set for {name}")
+            print(f"[stashdb] no API key set for {name}")
         return None, None
 
     ep = (endpoint or STASHDB_ENDPOINT_DEFAULT).strip()
     headers = {"ApiKey": api_key}
 
-    # 1) Introspektera en gång
     if _schema_caps_cache is None:
         try:
             _schema_caps_cache = _introspect_stashdb_schema(ep, api_key)
         except Exception as e:
             if DEBUG_IMAGES:
                 print(f"[stashdb] introspection failed: {e}")
-            _schema_caps_cache = { 'has_queryPerformers': True, 'qp_accepts_input': True,
-                                   'input_fields': {'name':'String','alias':'String','names':'String','per_page':'Int','page':'Int'} }
+            _schema_caps_cache = {
+                "has_queryPerformers": True,
+                "qp_accepts_input": True,
+                "input_fields": {"name": "String", "alias": "String", "names": "String", "per_page": "Int", "page": "Int"},
+                "performer_fields": ["id", "name", "aliases", "images", "urls"],
+            }
 
     caps = _schema_caps_cache or {}
-    if not (caps.get('has_queryPerformers') and caps.get('qp_accepts_input')):
+    if not (caps.get("has_queryPerformers") and caps.get("qp_accepts_input")):
         return None, None
 
-    inp_fields: dict = caps.get('input_fields', {})
+    inp_fields: dict = caps.get("input_fields", {})
+    performer_fields: list[str] = list(caps.get("performer_fields") or [])
+
+    default_wanted = [
+        "disambiguation",
+        "gender",
+        "birthdate",
+        "death_date",
+        "deathdate",
+        "ethnicity",
+        "country",
+        "eye_color",
+        "hair_color",
+        "height",
+        "height_cm",
+        "weight",
+        "measurements",
+        "instagram",
+        "twitter",
+        "tiktok",
+        "urls",
+        "images",
+        "stash_ids",
+    ]
+    if requested_fields:
+        for fld in requested_fields:
+            if fld not in default_wanted:
+                default_wanted.append(fld)
+
+    nested_templates = {
+        "urls": "urls { url }",
+        "images": "images { url }",
+        "stash_ids": "stash_ids { site stash_id endpoint }",
+    }
+
+    selection_parts: list[str] = []
+    for fld in ("id", "name", "aliases"):
+        if fld in performer_fields or fld in ("id", "name"):
+            if fld not in selection_parts:
+                selection_parts.append(fld)
+    for fld in default_wanted:
+        if fld in nested_templates:
+            if fld in performer_fields and nested_templates[fld] not in selection_parts:
+                selection_parts.append(nested_templates[fld])
+        elif fld in performer_fields and fld not in selection_parts:
+            selection_parts.append(fld)
+
+    if not selection_parts:
+        selection_parts = ["id", "name", "aliases"]
+
+    selection = " ".join(selection_parts)
 
     def _post(q: str, vars: dict) -> Optional[dict]:
         ok, r = _gql_post_raw(ep, headers, q, vars, timeout=10)
@@ -327,7 +398,7 @@ def _lookup_stashdb_image(name: str, endpoint: Optional[str] = None, api_key: Op
             return None
         try:
             data = r.json()
-            if isinstance(data, dict) and data.get('errors'):
+            if isinstance(data, dict) and data.get("errors"):
                 if DEBUG_IMAGES:
                     print(f"[stashdb] GQL errors: {str(data['errors'])[:200]}")
                 return None
@@ -337,13 +408,13 @@ def _lookup_stashdb_image(name: str, endpoint: Optional[str] = None, api_key: Op
                 print(f"[stashdb] non-json body: {r.text[:120]}")
             return None
 
-    q_tpl = """
-    query($inp:PerformerQueryInput!){
-      queryPerformers(input:$inp){ count performers{ id name aliases images{ url } } }
-    }
+    q_tpl = f"""
+    query($inp:PerformerQueryInput!){{
+      queryPerformers(input:$inp){{ count performers{{ {selection} }} }}
+    }}
     """
 
-    def _query_term(term: str, allowed_fields: Iterable[str]):
+    def _query_term(term: str, allowed_fields: Iterable[str]) -> tuple[Optional[dict], Optional[str]]:
         if not term:
             return None, None
         term = term.strip()
@@ -356,34 +427,29 @@ def _lookup_stashdb_image(name: str, endpoint: Optional[str] = None, api_key: Op
                 if field not in inp_fields:
                     continue
                 entry = {field: pattern}
-                if 'per_page' in inp_fields:
-                    entry['per_page'] = 40
+                if "per_page" in inp_fields:
+                    entry["per_page"] = 40
                 candidates.append(entry)
             if not candidates:
                 continue
             for inp in candidates:
-                data = _post(q_tpl, { 'inp': inp })
-                perfs = (((data or {}).get('data') or {}).get('queryPerformers') or {}).get('performers') or []
+                data = _post(q_tpl, {"inp": inp})
+                perfs = (((data or {}).get("data") or {}).get("queryPerformers") or {}).get("performers") or []
                 if not perfs:
                     continue
                 match = _select_exact(perfs, term)
-                if not match:
-                    continue
-                url = _extract_first_image(match)
-                if url:
-                    return url, term
+                if match:
+                    return match, term
         return None, None
 
-    # Försök 1: exakt name
-    url, matched = _query_term(name, ('name', 'names'))
-    if url:
-        return url, matched
+    performer, matched = _query_term(name, ("name", "names"))
+    if performer:
+        return performer, matched
 
-    # Försök 2: alias (inklusive originalnamnet plus ev. extra termer)
     alias_terms: list[str] = []
     seen_alias: set[str] = set()
 
-    def _add_alias_term(value: str | None):
+    def _push_alias(value: str | None):
         if not value:
             return
         val = value.strip()
@@ -395,21 +461,202 @@ def _lookup_stashdb_image(name: str, endpoint: Optional[str] = None, api_key: Op
         seen_alias.add(key)
         alias_terms.append(val)
 
-    _add_alias_term(name)  # säkerställ att originalsträngen testas även mot alias-fältet
+    _push_alias(name)
     if extra_terms:
         for alias in extra_terms:
-            _add_alias_term(alias)
+            _push_alias(alias)
 
     for alias_term in alias_terms:
-        url, matched = _query_term(alias_term, ('alias', 'names'))
+        if alias_term.lower() == name.strip().lower():
+            continue
+        performer, matched = _query_term(alias_term, ("alias", "names"))
+        if performer:
+            return performer, matched
+
+    return None, None
+
+
+def _lookup_stashdb_image(
+    name: str,
+    endpoint: Optional[str] = None,
+    api_key: Optional[str] = None,
+    extra_terms: Optional[Iterable[str]] = None,
+) -> tuple[Optional[str], Optional[str]]:
+    """Reuse strict lookup to extract the first image URL."""
+    alias_terms: list[str] = []
+    seen_alias: set[str] = set()
+
+    def _collect(term: str | None):
+        if not term:
+            return
+        val = term.strip()
+        if not val:
+            return
+        key = val.lower()
+        if key in seen_alias:
+            return
+        seen_alias.add(key)
+        alias_terms.append(val)
+
+    _collect(name)
+    if extra_terms:
+        for alias in extra_terms:
+            _collect(alias)
+
+    performer, matched = _stashdb_search_exact(
+        name,
+        endpoint=endpoint,
+        api_key=api_key,
+        extra_terms=[t for t in alias_terms if t.lower() != name.strip().lower()],
+        requested_fields=("images", "image_path"),
+    )
+    if performer:
+        url = _extract_first_image(performer)
         if url:
             return url, matched
 
     if DEBUG_IMAGES:
-        alias_info = f"; alias tried: {', '.join(alias_terms)}" if alias_terms else ''
+        alias_info = f"; alias tried: {', '.join(alias_terms)}" if alias_terms else ""
         print(f"[resolve_image][stashdb] strict miss: {name}{alias_info}")
-    return None, None
+    return None, matched
 
+
+@app.get("/stashdb/performer")
+def stashdb_performer_details():
+    name = (request.args.get("name") or "").strip()
+    if not name:
+        return jsonify({"error": "missing name"}), 400
+
+    stashdb_ep = (request.args.get("stashdb_endpoint") or STASHDB_ENDPOINT_DEFAULT).strip()
+    if request.args.get("stashdb_api_key") and DEBUG_IMAGES:
+        print("[stashdb] Ignoring client-supplied stashdb_api_key")
+
+    stashdb_key = STASHDB_API_KEY.strip()
+    if not stashdb_key:
+        return jsonify({"error": "stashdb_api_key not configured"}), 503
+
+    alias_terms = [a.strip() for a in request.args.getlist("alias") if isinstance(a, str) and a.strip()]
+
+    performer, matched = _stashdb_search_exact(
+        name,
+        endpoint=stashdb_ep,
+        api_key=stashdb_key,
+        extra_terms=alias_terms,
+        requested_fields=(
+            "disambiguation",
+            "aliases",
+            "gender",
+            "birthdate",
+            "death_date",
+            "deathdate",
+            "ethnicity",
+            "country",
+            "eye_color",
+            "hair_color",
+            "height",
+            "height_cm",
+            "weight",
+            "measurements",
+            "urls",
+            "images",
+            "stash_ids",
+            "instagram",
+            "twitter",
+            "tiktok",
+        ),
+    )
+    if not performer:
+        return jsonify({"performer": None, "matched": None}), 404
+
+    def _clean_str(value):
+        if isinstance(value, str):
+            value = value.strip()
+            return value or None
+        if value is None:
+            return None
+        return str(value)
+
+    def _clean_list(values):
+        cleaned: list[str] = []
+        for val in values or []:
+            if isinstance(val, str):
+                norm = val.strip()
+                if norm:
+                    cleaned.append(norm)
+        return cleaned
+
+    def _extract_urls(values):
+        urls: list[str] = []
+        for entry in values or []:
+            if isinstance(entry, str):
+                norm = entry.strip()
+                if norm:
+                    urls.append(norm)
+            elif isinstance(entry, dict):
+                norm = _clean_str(entry.get("url"))
+                if norm:
+                    urls.append(norm)
+        uniq: list[str] = []
+        seen: set[str] = set()
+        for url in urls:
+            if url in seen:
+                continue
+            seen.add(url)
+            uniq.append(url)
+        return uniq
+
+    stash_ids_raw = performer.get("stash_ids") or []
+    stash_ids: list[dict[str, Optional[str]]] = []
+    for entry in stash_ids_raw:
+        if not isinstance(entry, dict):
+            continue
+        sid = _clean_str(entry.get("stash_id") or entry.get("id"))
+        if not sid:
+            continue
+        stash_ids.append({
+            "stash_id": sid,
+            "endpoint": _clean_str(entry.get("endpoint") or entry.get("url") or stashdb_ep),
+            "site": _clean_str(entry.get("site")),
+        })
+    if not stash_ids and performer.get("id"):
+        stash_ids.append({
+            "stash_id": _clean_str(performer.get("id")),
+            "endpoint": stashdb_ep,
+            "site": None,
+        })
+
+    payload = {
+        "id": _clean_str(performer.get("id")),
+        "name": _clean_str(performer.get("name")) or name,
+        "disambiguation": _clean_str(performer.get("disambiguation")),
+        "aliases": _clean_list(performer.get("aliases") or []),
+        "gender": _clean_str(performer.get("gender")),
+        "birthdate": _clean_str(performer.get("birthdate")),
+        "death_date": _clean_str(performer.get("death_date") or performer.get("deathdate")),
+        "ethnicity": _clean_str(performer.get("ethnicity")),
+        "country": _clean_str(performer.get("country")),
+        "eye_color": _clean_str(performer.get("eye_color")),
+        "hair_color": _clean_str(performer.get("hair_color")),
+        "height": performer.get("height_cm") or performer.get("height"),
+        "weight": performer.get("weight"),
+        "measurements": _clean_str(performer.get("measurements")),
+        "urls": _extract_urls(performer.get("urls")),
+        "stash_ids": stash_ids,
+        "social": {
+            "instagram": _clean_str(performer.get("instagram")),
+            "twitter": _clean_str(performer.get("twitter")),
+            "tiktok": _clean_str(performer.get("tiktok")),
+        },
+    }
+
+    image_url = _extract_first_image(performer)
+
+    return jsonify({
+        "performer": payload,
+        "matched": matched,
+        "image_url": image_url,
+        "source_endpoint": stashdb_ep,
+    })
 
 
 # -------------------------------------------------
