@@ -24,6 +24,10 @@ pkgs.mkShell {
     echo "✅ Nix-miljö laddad."
 
     export LD_LIBRARY_PATH="${pkgs.zlib}/lib:${pkgs.stdenv.cc.cc.lib}/lib:$LD_LIBRARY_PATH"
+    export STASH_URL="http://192.168.0.50:9999"
+    export STASHDB_API_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiJtYXJxcyIsInN1YiI6IkFQSUtleSIsImlhdCI6MTcwNTY1NjEyNX0.aXDAVojp6xfUlASUxXks7O7-UHIzuIVEcKXJ3Qwm1c4"
+    export STRICT_NAME_MATCH=1
+
 
     if [ ! -d .venv ]; then
       python3 -m venv .venv
@@ -32,7 +36,7 @@ pkgs.mkShell {
 
     pip install --upgrade pip
     pip install --no-cache-dir onnxruntime insightface opencv-python-headless==4.12.0.88 numpy flask flask-cors
-
-    echo "✅ Virtuell miljö aktiv. Kör: python face_arc_pipeline.py --mode both"
+    
+    python api_endpoint.py
   '';
 }

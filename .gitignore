@@ -6,3 +6,7 @@ arcface_work-ppic/*.jsonl
 models/deploy_gender.prototxt
 models/gender_net.caffemodel
 .~lock.*
+arcface_work-ppic/embeddings_ppic.pkl.bak
+arcface_work-ppic/embeddings_ppic.pkl.bak2
+arcface_work-ppic/embeddings_ppic.pkl.bak4
+arcface_work-ppic/embeddings_ppic.pklbak3
