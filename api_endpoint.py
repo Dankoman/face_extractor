@@ -21,10 +21,11 @@ Kräver: Flask, flask_cors, requests, numpy, Pillow, OpenCV, insightface (FaceAn
 from __future__ import annotations
 
 import os
+import re
 import time
 import json
 import pickle
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Iterable
 
 import cv2
 import numpy as np
@@ -233,9 +234,9 @@ def _select_exact(perfs: list[dict], name: str) -> Optional[dict]:
 # Bildproxy lookups – **strikt exaktmatch**, ingen cache
 # -------------------------------------------------
 
-def _lookup_local_stash_image(name: str) -> Optional[str]:
+def _lookup_local_stash_image(name: str, alias_sink: Optional[list[str]] = None) -> Optional[str]:
     """Sök i lokal Stash med strikt exaktmatch (case‑insensitivt) på name/alias.
-    Ingen fallback till CONTAINS."""
+    Ingen fallback till CONTAINS. Fyller optional alias_sink med matchande namn/alias."""
     local_headers = {"ApiKey": STASH_API_KEY} if STASH_API_KEY else None
 
     gql_equals = """
@@ -261,6 +262,23 @@ def _lookup_local_stash_image(name: str) -> Optional[str]:
             print(f"[resolve_image][local] strict miss: {name}")
         return None
 
+    if alias_sink is not None:
+        seen = { (a or '').strip().lower() for a in alias_sink if isinstance(a, str) }
+        def _push(value: str | None):
+            if not value:
+                return
+            val = value.strip()
+            if not val:
+                return
+            key = val.lower()
+            if key in seen:
+                return
+            seen.add(key)
+            alias_sink.append(val)
+        _push(perf.get("name"))
+        for alias in perf.get("aliases") or []:
+            _push(alias)
+
     images = perf.get("images") or []
     url = (images[0].get("url") if images else None) or perf.get("image_path")
     url = url if (url or '').startswith('http') else f"{STASH_URL}{url}" if url else None
@@ -269,15 +287,18 @@ def _lookup_local_stash_image(name: str) -> Optional[str]:
     return url
 
 
-def _lookup_stashdb_image(name: str, endpoint: Optional[str] = None, api_key: Optional[str] = None) -> Optional[str]:
-    """Sök i StashDB med strikt exaktmatch (case‑insensitivt) på name/alias.
-    Om ingen exaktmatch hittas returneras None."""
+
+def _lookup_stashdb_image(name: str, endpoint: Optional[str] = None, api_key: Optional[str] = None,
+                         extra_terms: Optional[Iterable[str]] = None) -> tuple[Optional[str], Optional[str]]:
+    """Sök i StashDB med strikt exaktmatch (case-insensitivt) på name.
+    Om ingen träff hittas på name görs en andra omgång mot alias-fältet.
+    Returnerar (url, matched_term) där matched_term är strängen som gav träff."""
     global _schema_caps_cache
     api_key = api_key or STASHDB_API_KEY
     if not api_key:
         if DEBUG_IMAGES:
             print(f"[resolve_image][stashdb] no API key set for {name}")
-        return None
+        return None, None
 
     ep = (endpoint or STASHDB_ENDPOINT_DEFAULT).strip()
     headers = {"ApiKey": api_key}
@@ -289,11 +310,12 @@ def _lookup_stashdb_image(name: str, endpoint: Optional[str] = None, api_key: Op
         except Exception as e:
             if DEBUG_IMAGES:
                 print(f"[stashdb] introspection failed: {e}")
-            _schema_caps_cache = { 'has_queryPerformers': True, 'qp_accepts_input': True, 'input_fields': {'name':'String','alias':'String','names':'String','per_page':'Int','page':'Int'} }
+            _schema_caps_cache = { 'has_queryPerformers': True, 'qp_accepts_input': True,
+                                   'input_fields': {'name':'String','alias':'String','names':'String','per_page':'Int','page':'Int'} }
 
     caps = _schema_caps_cache or {}
     if not (caps.get('has_queryPerformers') and caps.get('qp_accepts_input')):
-        return None
+        return None, None
 
     inp_fields: dict = caps.get('input_fields', {})
 
@@ -315,43 +337,79 @@ def _lookup_stashdb_image(name: str, endpoint: Optional[str] = None, api_key: Op
                 print(f"[stashdb] non-json body: {r.text[:120]}")
             return None
 
-    # Citerad sträng för exaktmatch (Stash‑Box: quoted => exact)
-    qname = f'"{name}"'
-
-    # Kandidat-inputs baserat på faktiska fält – öka per_page
-    candidates = []
-    def add_if(d: dict):
-        obj = {k:v for k,v in d.items() if k in inp_fields}
-        if obj and obj not in candidates:
-            candidates.append(obj)
-
-    add_if({'name': qname, 'per_page': 40})
-    add_if({'alias': qname, 'per_page': 40})
-    add_if({'names': qname, 'per_page': 40})  # OBS: sträng, inte lista
-
-    perfs: list[dict] = []
     q_tpl = """
     query($inp:PerformerQueryInput!){
       queryPerformers(input:$inp){ count performers{ id name aliases images{ url } } }
     }
     """
-    for inp in candidates:
-        data = _post(q_tpl, { 'inp': inp })
-        perfs = (((data or {}).get('data') or {}).get('queryPerformers') or {}).get('performers') or []
-        if perfs:
-            break
 
-    if not perfs:
-        return None
+    def _query_term(term: str, allowed_fields: Iterable[str]):
+        if not term:
+            return None, None
+        term = term.strip()
+        if not term:
+            return None, None
+        patterns = [f'"{term}"', term]
+        for pattern in patterns:
+            candidates: list[dict] = []
+            for field in allowed_fields:
+                if field not in inp_fields:
+                    continue
+                entry = {field: pattern}
+                if 'per_page' in inp_fields:
+                    entry['per_page'] = 40
+                candidates.append(entry)
+            if not candidates:
+                continue
+            for inp in candidates:
+                data = _post(q_tpl, { 'inp': inp })
+                perfs = (((data or {}).get('data') or {}).get('queryPerformers') or {}).get('performers') or []
+                if not perfs:
+                    continue
+                match = _select_exact(perfs, term)
+                if not match:
+                    continue
+                url = _extract_first_image(match)
+                if url:
+                    return url, term
+        return None, None
 
-    # **Ingen fallback** – kräver exaktmatch
-    p = _select_exact(perfs, name)
-    if not p:
-        if DEBUG_IMAGES:
-            print(f"[resolve_image][stashdb] strict miss: {name}")
-        return None
+    # Försök 1: exakt name
+    url, matched = _query_term(name, ('name', 'names'))
+    if url:
+        return url, matched
 
-    return _extract_first_image(p)
+    # Försök 2: alias (inklusive originalnamnet plus ev. extra termer)
+    alias_terms: list[str] = []
+    seen_alias: set[str] = set()
+
+    def _add_alias_term(value: str | None):
+        if not value:
+            return
+        val = value.strip()
+        if not val:
+            return
+        key = val.lower()
+        if key in seen_alias:
+            return
+        seen_alias.add(key)
+        alias_terms.append(val)
+
+    _add_alias_term(name)  # säkerställ att originalsträngen testas även mot alias-fältet
+    if extra_terms:
+        for alias in extra_terms:
+            _add_alias_term(alias)
+
+    for alias_term in alias_terms:
+        url, matched = _query_term(alias_term, ('alias', 'names'))
+        if url:
+            return url, matched
+
+    if DEBUG_IMAGES:
+        alias_info = f"; alias tried: {', '.join(alias_terms)}" if alias_terms else ''
+        print(f"[resolve_image][stashdb] strict miss: {name}{alias_info}")
+    return None, None
+
 
 
 # -------------------------------------------------
@@ -410,20 +468,59 @@ def resolve_image():
 
     # **Ingen cache** – alltid färsk uppslagning
     url: Optional[str] = None
-    tried = []
+    tried: list[str] = []
+    stashdb_matched_term: Optional[str] = None
+
+    alias_candidates: list[str] = []
+    seen_alias: set[str] = set()
+
+    def _collect_alias(value: str | None):
+        if not value:
+            return
+        val = value.strip()
+        if not val:
+            return
+        key = val.strip('"').lower()
+        if key in seen_alias:
+            return
+        seen_alias.add(key)
+        alias_candidates.append(val)
+
+    def _collect_variants(raw: str):
+        if not raw:
+            return
+        # dela upp på typiska alias-separatorer: "/", "|", "aka", kommatecken/semi-kolon
+        parts = re.split(r'\s*(?:/|\||\baka\b|\bAKA\b|,|;)\s*', raw)
+        for part in parts:
+            cleaned = part.strip()
+            if cleaned and cleaned.lower() != raw.strip().lower():
+                _collect_alias(cleaned)
+
+    _collect_variants(name)
 
     if source in ("local", "both"):
         tried.append("local")
-        url = _lookup_local_stash_image(name)
+        local_aliases: list[str] = []
+        url = _lookup_local_stash_image(name, alias_sink=local_aliases)
+        for alias in local_aliases:
+            _collect_alias(alias)
 
     if not url and source in ("stashdb", "both"):
         tried.append("stashdb")
-        # Försök först med citerad (exakt), sedan ociterad
-        url = (_lookup_stashdb_image(f'"{name}"', endpoint=stashdb_ep, api_key=stashdb_key)
-               or _lookup_stashdb_image(name, endpoint=stashdb_ep, api_key=stashdb_key))
+        stashdb_url, stashdb_matched_term = _lookup_stashdb_image(
+            name,
+            endpoint=stashdb_ep,
+            api_key=stashdb_key,
+            extra_terms=alias_candidates
+        )
+        url = stashdb_url
+
+    alias_note = ''
+    if stashdb_matched_term and stashdb_matched_term.strip().lower() != name.strip().lower():
+        alias_note = f" via '{stashdb_matched_term}'"
 
     if DEBUG_IMAGES:
-        print(f"[resolve_image] {name} -> {url} (strict; tried: {','.join(tried)})")
+        print(f"[resolve_image] {name} -> {url} (strict{alias_note}; tried: {','.join(tried)})")
 
     if fmt == "json":
         return jsonify({"url": url})
