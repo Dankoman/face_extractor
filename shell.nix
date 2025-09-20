@@ -25,7 +25,7 @@ pkgs.mkShell {
 
     export LD_LIBRARY_PATH="${pkgs.zlib}/lib:${pkgs.stdenv.cc.cc.lib}/lib:$LD_LIBRARY_PATH"
     export STASH_URL="http://192.168.0.50:9999"
-    export STASHDB_API_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiJtYXJxcyIsInN1YiI6IkFQSUtleSIsImlhdCI6MTcwNTY1NjEyNX0.aXDAVojp6xfUlASUxXks7O7-UHIzuIVEcKXJ3Qwm1c4"
+    export STASHDB_API_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiJlYjAzMzRkNi03NTQ4LTRhYjAtYjExMC0xOGEyZmI2Y2YwMDQiLCJzdWIiOiJBUElLZXkiLCJpYXQiOjE2NjM0NDg1MjZ9.ckvz_oNpI_HSCGSSOa1xI2mprnoDCBl7EuoBAXcK6Us"
     export STRICT_NAME_MATCH=1
 
 
