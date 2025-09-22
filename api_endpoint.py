@@ -25,6 +25,8 @@ import re
 import time
 import json
 import pickle
+from pathlib import Path
+from threading import Lock
 from typing import Optional, Dict, Any, Iterable
 
 import cv2
@@ -55,6 +57,16 @@ clf = bundle["model"]
 le = bundle["label_encoder"]
 
 THRESHOLD = 0.2  # legacy
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+MODELS_DIR = SCRIPT_DIR / "models"
+GENDER_PROTO_PATH = MODELS_DIR / "deploy_gender.prototxt"
+GENDER_MODEL_PATH = MODELS_DIR / "gender_net.caffemodel"
+FEMALE_THRESHOLD = float(os.environ.get("FACE_EXTRACTOR_FEMALE_THRESHOLD", "0.7"))
+_gender_net: Any | None = None
+_gender_filter_available: bool | None = None
+_gender_lock = Lock()
+
 
 # -------------------------------------------------
 # Proxy‑konfiguration (env)
@@ -117,6 +129,56 @@ def _faces_to_boxes(faces):
         x1, y1, x2, y2 = f.bbox.astype(int)
         boxes.append({"x": int(x1), "y": int(y1), "w": int(x2 - x1), "h": int(y2 - y1)})
     return boxes
+
+
+def _ensure_gender_net() -> Any | None:
+    global _gender_net, _gender_filter_available
+    if _gender_net is not None:
+        return _gender_net
+    if _gender_filter_available is False:
+        return None
+    if not GENDER_PROTO_PATH.exists() or not GENDER_MODEL_PATH.exists():
+        print(f"[gender] Missing model files: {GENDER_PROTO_PATH} / {GENDER_MODEL_PATH}")
+        _gender_filter_available = False
+        return None
+    try:
+        net = cv2.dnn.readNetFromCaffe(str(GENDER_PROTO_PATH), str(GENDER_MODEL_PATH))
+    except Exception as exc:
+        print(f"[gender] Failed to load gender net: {exc}")
+        _gender_filter_available = False
+        return None
+    _gender_net = net
+    _gender_filter_available = True
+    return _gender_net
+
+
+def _female_probability(face, img_bgr: np.ndarray) -> tuple[Optional[float], bool]:
+    net = _ensure_gender_net()
+    if net is None:
+        return None, False
+    h, w = img_bgr.shape[:2]
+    x1, y1, x2, y2 = face.bbox.astype(int)
+    x1, y1, x2, y2 = max(x1, 0), max(y1, 0), min(x2, w), min(y2, h)
+    if x2 <= x1 or y2 <= y1:
+        return None, True
+    face_crop = img_bgr[y1:y2, x1:x2]
+    if face_crop.size == 0:
+        return None, True
+    try:
+        blob = cv2.dnn.blobFromImage(face_crop, 1.0, (227, 227), (78.426, 87.768, 114.895), swapRB=False)
+    except Exception:
+        return None, True
+    with _gender_lock:
+        try:
+            net.setInput(blob)
+            preds = net.forward()[0]
+        except Exception:
+            return None, True
+    try:
+        female_prob = float(preds[1]) if len(preds) > 1 else float(preds[0])
+    except Exception:
+        return None, True
+    return female_prob, True
 
 
 def _predict_top_k(emb: np.ndarray, k: int) -> list[dict]:
@@ -684,12 +746,19 @@ def recognize():
         boxes = _faces_to_boxes(faces)
         result = []
         for face, box in zip(faces, boxes):
+            female_prob, filter_active = _female_probability(face, img_bgr)
+            if filter_active and (female_prob is None or female_prob < FEMALE_THRESHOLD):
+                continue
             emb = getattr(face, "embedding", None)
+            entry = {"box": box, "candidates": []}
+            if female_prob is not None:
+                entry["female_probability"] = female_prob
             if emb is None or getattr(emb, "size", 0) == 0:
-                result.append({"box": box, "candidates": []})
+                result.append(entry)
                 continue
             candidates = _predict_top_k(emb, k=top_k)
-            result.append({"box": box, "candidates": candidates})
+            entry["candidates"] = candidates
+            result.append(entry)
         return jsonify(result)
     except Exception as e:
         return jsonify({"error": f"Serverfel: {e}"}), 500
