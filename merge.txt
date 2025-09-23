@@ -161,7 +161,7 @@ Stella Stevens|Dorina
 Doni Blass|Spring Thomas
 Sofiya Pandora|Mikana|Oksana Rysenko
 Tina Johnson|Tasha Grant
-Summer Breeze|Summer
+Summer Breeze|Summer|Elizaveta
 Cate Harrington|Sophie Banks
 Amelinda Luna|Anastasia Price
 Alisa Lisa|Lila Nova
@@ -295,7 +295,7 @@ Adrianna Babin|Ella Bonita
 Zuzana Zeleznovova|Zuzana|Zuzana Z
 Stephanie Adams|Stephanie Saint
 Maria Ivanova|Vika Volkova
-Lena Anderson|Blaire Ivory
+Lena Anderson|Blaire Ivory|Sloan Kendricks
 Jasmine Zee|Zarina Masood|Zarina Massoud
 Hilary Craig|Hilary C|Paula U|Jenna Kseniya|Viktoriia Aliko
 Cinthia Hunter|Lady X
@@ -330,7 +330,7 @@ Dallas Black|Laney Rose
 Alya Marie|Ayla Marie
 Sara Simon|Sarah Simon
 Mandi Ray|Mandii Ray
-Lexi Fox|Lexie Fux
+Lexi Fox|Lexie Fux|Lexie Fox
 Camille Cute|Camille Sun
 Balina A Yana|Balina
 Playful Ann|Playful Anne
@@ -395,7 +395,7 @@ Aurilee Summers|Aurielee Summers
 Ayelet Zurer|Hannas Honeypot
 Sofia Gucci|Sofia Cucci
 Bysya A|Bysya A Sanja
-Natalie Grace|Demi C Bailey
+Natalie Grace|Demi C Bailey|Demi C
 Chelsea Star|Sasha X-Ray
 Zoey Chandler|Zoey Holloway
 Ava Adams|Ava Addams
@@ -413,7 +413,7 @@ Edita Recna|Eolita
 Erica Lightspeed|Aneta J
 Shay VanBurin|Shay Vanburin
 Kaira Love|Sweet Angelina
-Franziska Facella|Franziska
+Franziska Facella|Franziska|Francesca
 Helena White|Helena Sweet
 Naomi Nia|Naomi Nevena
 Cassidy Ryan|Jessie Young
@@ -438,7 +438,7 @@ Katrin Wolf|Nesty
 Sophie Sweet|Sophie Moone
 Bridgit A Ossia|Becky|Bridgit
 Boroka Borres|Boroka
-Milena Angel|Milena D
+Milena Angel|Milena D|Milena Rebrik
 Linet A Lynette|Linet
 Selvaggia|Selvaggia Babe
 Nyomi Marcela|Nyomi Marcella
@@ -471,7 +471,7 @@ Erna Ohara|Erna O_Hara
 Erika Kortni|Erika Korti
 Bronwyn Ball|Maria Smith
 Arina G Gretta|Gretta
-Dominika Chybova|Dominika C
+Dominika Chybova|Dominika C|Dominika
 Gina Gerson|Gina
 Amanda Booth|Amanda S
 Emiri Momota|Sumire Mizukawa
@@ -492,3 +492,34 @@ Liv Aguilera|Liv Revamped
 Olivia Lust|Minni Love
 Sarah Jackson|Jasper Shelton
 Eden Thomas|Mishel Dark
+Daisie Belle|Daisy Belle
+Rayna Marie|Davina Davis
+Yarina A|Yarina P
+Private Jewel|Jewel A
+Alice Brookes|Alice Brooks
+Saki Asaoka|Hana Haruna
+Henessy|Alina Henessy
+Bunny Colby|Nadya Nabakova
+Aria Star|Victoria Mur
+Busty Pam|Melissa Mandlikova
+Olivia Devine|Olivia Jameson
+Yuki Motoyama|Yuu Uehara
+Sandy Knight|Sandy Style
+Angelica Black|Black Angelika
+Alicia Secrets|Alicia Secret
+Juliette Cosmo|Cara Costillo
+Victoria Tiffany|Victoria Tiffani
+Roxy Del|Roxy Sky
+Jemma Reseigh|Jemma Louise
+Georgia Sampaio|Georgia
+Maddy Oreilly|Maddy O_Reilly
+Carol Sampaio|Carolina Sampaio
+Courtney Sweet|Liu Love
+Eliza Thorne|Eliza Thorn
+Kayla Kayden|Lacy Spice
+Aiko Hirose|Ayumu Sena
+SaRenna Lee|Jayne Mansfield
+Polina Maxim|Venera Maxima
+Lizi Smoke|Liza Smoke
+Rachel G Fox|Rachel Fox
+Arkida Revees|Arkida Reeves
