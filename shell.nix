@@ -27,6 +27,7 @@ pkgs.mkShell {
     export STASH_URL="http://192.168.0.50:9999"
     export STASHDB_API_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiJlYjAzMzRkNi03NTQ4LTRhYjAtYjExMC0xOGEyZmI2Y2YwMDQiLCJzdWIiOiJBUElLZXkiLCJpYXQiOjE2NjM0NDg1MjZ9.ckvz_oNpI_HSCGSSOa1xI2mprnoDCBl7EuoBAXcK6Us"
     export STRICT_NAME_MATCH=1
+    export FACE_EXTRACTOR_FEMALE_THRESHOLD="0.3"
 
 
     if [ ! -d .venv ]; then
