@@ -71,7 +71,7 @@ def load_aliases(merge_path: Path) -> dict:
 GENDER_PROTO = str(MODELS_DIR / "deploy_gender.prototxt")
 GENDER_MODEL = str(MODELS_DIR / "gender_net.caffemodel")
 gender_net = cv2.dnn.readNetFromCaffe(GENDER_PROTO, GENDER_MODEL)
-FEMALE_THRESH = 0.7
+FEMALE_THRESH = 0.0
 # ---------------------------------------------
 
 # -------------- Hjälpfunktioner --------------
@@ -154,47 +154,113 @@ def upsample_if_needed(img_rgb: np.ndarray) -> np.ndarray:
     new_h = int(round(h * scale))
     return np.array(Image.fromarray(img_rgb).resize((new_w, new_h), Image.BICUBIC))
 
+
+def get_embedding_direct(rec_model, img_rgb: np.ndarray) -> Optional[np.ndarray]:
+    """Direkt embedding utan detektor (112x112 resize)."""
+    if img_rgb is None:
+        return None
+    img_112 = Image.fromarray(img_rgb).resize((112, 112), Image.BICUBIC)
+    bgr = rgb_to_bgr(np.array(img_112)).astype(np.uint8)
+    emb = rec_model.get(bgr)
+    if emb is None or emb.size == 0:
+        return None
+    return emb.astype(np.float32)
+
 # ----------- Embedding-funktion -----------
 
 def compute_embedding(app: FaceAnalysis,
                       rec_model,
                       img_path: str,
                       allow_fallback: bool,
-                      allow_upsample: bool) -> tuple[Optional[np.ndarray], int, bool]:
+                      allow_upsample: bool,
+                      verbose: bool = False) -> tuple[Optional[np.ndarray], int, bool]:
+    """Returnerar (embedding, antal detekterade ansikten, fallback användes)."""
+    def log(msg: str) -> None:
+        if verbose:
+            print(f"[VERBOSE] {img_path}: {msg}")
+
     img_rgb = load_image_rgb(img_path)
     if img_rgb is None:
+        log("failed to load image")
         return None, 0, False
+
     h, w = img_rgb.shape[:2]
+    log(f"image size {w}x{h}")
+
     if w < MIN_WIDTH or h < MIN_HEIGHT:
+        log("image below minimum size")
+        if allow_fallback:
+            log("trying direct fallback because image is too small")
+            emb = get_embedding_direct(rec_model, img_rgb)
+            if emb is None:
+                log("fallback produced no embedding")
+                return None, 0, True
+            log("fallback embedding succeeded (small image)")
+            return emb, 0, True
         return None, 0, False
+
+    img_for_det = img_rgb
     if allow_upsample:
         try:
-            img_rgb = upsample_if_needed(img_rgb)
-        except Exception:
+            upsampled = upsample_if_needed(img_rgb)
+            if upsampled is not img_rgb:
+                log("upsampled image before detection")
+            img_for_det = upsampled
+        except Exception as exc:
+            log(f"upsample failed: {exc}")
             return None, 0, False
-    bgr = rgb_to_bgr(img_rgb)
+
+    bgr = rgb_to_bgr(img_for_det)
     faces = app.get(bgr)
-    if len(faces) != 1:
-        return None, len(faces), False
+    n_faces = len(faces)
+    log(f"detector found {n_faces} face(s)")
+
+    if n_faces == 0 and allow_fallback:
+        log("no faces detected; trying direct fallback embedding")
+        emb = get_embedding_direct(rec_model, img_rgb)
+        if emb is None:
+            log("fallback produced no embedding")
+            return None, 0, True
+        log("fallback embedding succeeded (no detection)")
+        return emb, 0, True
+
+    if n_faces != 1:
+        log(f"rejecting because {n_faces} faces were detected")
+        return None, n_faces, False
+
     face = faces[0]
+    h_det, w_det = img_for_det.shape[:2]
     x1, y1, x2, y2 = face.bbox.astype(int)
-    x1, y1, x2, y2 = max(x1,0), max(y1,0), min(x2,w), min(y2,h)
+    x1, y1, x2, y2 = max(x1, 0), max(y1, 0), min(x2, w_det), min(y2, h_det)
     if x2 <= x1 or y2 <= y1:
+        log("invalid bounding box after clipping")
         return None, 1, False
+
     face_crop = bgr[y1:y2, x1:x2]
     if face_crop.size == 0:
+        log("face crop is empty")
         return None, 1, False
+
     try:
-        blob = cv2.dnn.blobFromImage(face_crop, 1.0, (227, 227), (78.426,87.768,114.895), swapRB=False)
-    except Exception:
+        blob = cv2.dnn.blobFromImage(face_crop, 1.0, (227, 227), (78.426, 87.768, 114.895), swapRB=False)
+    except Exception as exc:
+        log(f"failed to build gender blob: {exc}")
         return None, 1, False
+
     gender_net.setInput(blob)
     preds = gender_net.forward()[0]
-    if float(preds[1]) < FEMALE_THRESH:
+    female_prob = float(preds[1])
+    log(f"gender female probability={female_prob:.3f}")
+    if female_prob < FEMALE_THRESH:
+        log(f"rejecting due to female probability < {FEMALE_THRESH}")
         return None, 1, False
+
     emb = face.embedding
     if emb is None or emb.size == 0:
+        log("embedding empty despite single face")
         return None, 1, False
+
+    log("embedding computed successfully")
     return emb.astype(np.float32), 1, False
 
 # ----------------- Pipeline -----------------
@@ -216,9 +282,18 @@ def encode(args) -> None:
         for path,label in tqdm(todo,unit="img"):
             ok=False
             try:
-                emb,n,_=compute_embedding(app,rec_model,path,args.allow_fallback,args.allow_upsample)
-                if emb is not None:
-                    X.append(emb); y.append(label); ok=True
+                emb, n, fb = compute_embedding(
+                    app, rec_model, path,
+                    args.allow_fallback, args.allow_upsample,
+                    verbose=args.verbose
+                )
+                ok = emb is not None
+                if args.verbose:
+                    status = "OK" if ok else "FAIL"
+                    print(f"[VERBOSE] {path}: final status {status} (faces={n}, fallback={fb})")
+                if ok:
+                    X.append(emb)
+                    y.append(label)
             except Exception as e:
                 print(f"❌ {path}: {e}",file=sys.stderr)
             append_processed(proc_path,path,ok)
@@ -283,6 +358,7 @@ def main():
     ap.add_argument("--min-per-class",type=int,default=MIN_PER_CLASS_DEF)
     ap.add_argument("--allow-fallback",action="store_true")
     ap.add_argument("--allow-upsample",action="store_true")
+    ap.add_argument("--verbose", action="store_true")
     args=ap.parse_args();EMB_PKL=args.embeddings
     if args.mode in ("encode","both"): encode(args)
     if args.mode in ("train","both"): train(args)

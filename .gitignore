@@ -13,3 +13,4 @@ arcface_work-ppic/embeddings_ppic.pklbak3
 __pycache__/api_endpoint.cpython-311.pyc
 merge?.csv
 arcface_work-ppic/embeddings_ppic.pkl*
+__pycache__/face_arc_pipeline.cpython-311.pyc
