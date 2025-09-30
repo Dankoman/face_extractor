@@ -14,3 +14,6 @@ __pycache__/api_endpoint.cpython-311.pyc
 merge?.csv
 arcface_work-ppic/embeddings_ppic.pkl*
 __pycache__/face_arc_pipeline.cpython-311.pyc
+arcface_work-ppic/high_false_80_100.ods
+arcface_work-ppic/processed-ppic.jsonl.bak2
+arcface_work-ppic/high_false_80_100.ods
