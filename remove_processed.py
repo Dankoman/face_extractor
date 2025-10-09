@@ -1,11 +1,12 @@
-"""Ta bort embeddings för listade namn (med alias-stöd)."""
+#!/usr/bin/env python3
+"""Filtrera bort poster ur processed-ppic.jsonl baserat på remove.txt och merge.txt."""
 from __future__ import annotations
 
 import argparse
-import pickle
+import json
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, Iterable, List, Sequence, Set
+from typing import Dict, Iterable, List, Set
 
 
 def read_lines(path: Path) -> List[str]:
@@ -29,7 +30,7 @@ def load_alias_map(merge_path: Path) -> tuple[Dict[str, str], Dict[str, Set[str]
 
 
 def expand_remove_set(remove_names: Iterable[str], alias_to_primary: Dict[str, str],
-                      primary_to_aliases: Dict[str, Set[str]]) -> tuple[Set[str], Dict[str, int]]:
+                      primary_to_aliases: Dict[str, Set[str]]):
     primary_counts = {alias_to_primary.get(name, name): 0 for name in remove_names}
     expanded: Set[str] = set()
     for primary in primary_counts:
@@ -38,18 +39,18 @@ def expand_remove_set(remove_names: Iterable[str], alias_to_primary: Dict[str, s
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Ta bort embeddings för namn i remove.txt")
-    parser.add_argument("--embeddings", default="arcface_work-ppic/embeddings_ppic.pkl", help="Pickle-fil med embeddings")
+    parser = argparse.ArgumentParser(description="Ta bort poster ur processed JSONL")
+    parser.add_argument("--processed", default="arcface_work-ppic/processed-ppic.jsonl", help="JSONL-fil att filtrera")
     parser.add_argument("--remove", default="remove.txt", help="Textfil med namn att ta bort")
     parser.add_argument("--merge", default="merge.txt", help="Aliasfil (pipe-separerad)")
     args = parser.parse_args()
 
-    embeddings_path = Path(args.embeddings)
+    processed_path = Path(args.processed)
     remove_path = Path(args.remove)
     merge_path = Path(args.merge)
 
-    if not embeddings_path.exists():
-        raise SystemExit(f"Hittar inte embeddingsfilen: {embeddings_path}")
+    if not processed_path.exists():
+        raise SystemExit(f"Hittar inte processed-filen: {processed_path}")
     if not remove_path.exists():
         raise SystemExit(f"Hittar inte remove-filen: {remove_path}")
 
@@ -57,32 +58,39 @@ def main() -> None:
     alias_to_primary, primary_to_aliases = load_alias_map(merge_path)
     expanded_remove, counters = expand_remove_set(remove_names, alias_to_primary, primary_to_aliases)
 
-    with embeddings_path.open("rb") as f:
-        data = pickle.load(f)
+    tmp_path = processed_path.with_suffix(processed_path.suffix + ".tmp")
 
-    X: Sequence = data["X"]
-    y: Sequence[str] = data["y"]
+    total = kept = removed = 0
+    with processed_path.open("r", encoding="utf-8") as src, tmp_path.open("w", encoding="utf-8") as dst:
+        for raw in src:
+            total += 1
+            line = raw.rstrip("\n")
+            if not line:
+                continue
+            try:
+                rec = json.loads(line)
+            except json.JSONDecodeError:
+                dst.write(raw)
+                kept += 1
+                continue
+            path = rec.get("path", "")
+            performer = Path(path).parent.name if path else ""
+            primary = alias_to_primary.get(performer, performer)
+            if performer in expanded_remove or primary in counters:
+                counters[primary] = counters.get(primary, 0) + 1
+                removed += 1
+                continue
+            dst.write(raw)
+            kept += 1
 
-    keep_idx: List[int] = []
-    removed = 0
-    for idx, label in enumerate(y):
-        primary = alias_to_primary.get(label, label)
-        if label in expanded_remove or primary in counters:
-            counters[primary] = counters.get(primary, 0) + 1
-            removed += 1
-            continue
-        keep_idx.append(idx)
+    tmp_path.replace(processed_path)
 
-    X_new = [X[i] for i in keep_idx]
-    y_new = [y[i] for i in keep_idx]
-
-    with embeddings_path.open("wb") as f:
-        pickle.dump({"X": X_new, "y": y_new}, f)
-
+    print(f"Totalrader: {total}")
+    print(f"Borttagna: {removed}")
+    print(f"Kvar: {kept}")
     missing = [name for name, count in counters.items() if count == 0]
-    print(f"Tog bort {removed} poster från '{embeddings_path}' baserat på '{remove_path}'.")
     if missing:
-        print("Ej hittade i embeddings:")
+        print("Hittade inte:")
         for name in missing:
             print(f"  - {name}")
 

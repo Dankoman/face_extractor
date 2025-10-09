@@ -29,6 +29,9 @@ import numpy as np
 def load_embeddings(path: Path) -> Tuple[np.ndarray, np.ndarray]:
     data = pickle.loads(path.read_bytes())
     X = np.vstack(data["X"]).astype(np.float32)
+    norms = np.linalg.norm(X, axis=1, keepdims=True)
+    norms[norms == 0] = 1.0
+    X = X / norms
     y = np.array(data["y"], dtype=object)
     return X, y
 

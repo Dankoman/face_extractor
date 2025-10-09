@@ -49,22 +49,50 @@ MIN_PER_CLASS_DEF   = 2
 
 # ------------------ Merge Aliases ------------------
 MERGE_TXT = SCRIPT_DIR / "merge.txt"
+REMOVE_TXT = SCRIPT_DIR / "remove.txt"
 
-def load_aliases(merge_path: Path) -> dict:
-    alias_map = {}
+def load_aliases(merge_path: Path) -> Tuple[dict, dict]:
+    alias_to_primary = {}
+    primary_to_aliases = {}
     if not merge_path.exists():
-        return alias_map
-    for ln in merge_path.read_text(encoding='utf-8').splitlines():
-        ln = ln.strip()
-        if not ln or ln.startswith('#') or ':' not in ln:
+        return alias_to_primary, primary_to_aliases
+    for raw in merge_path.read_text(encoding='utf-8').splitlines():
+        raw = raw.strip()
+        if not raw:
             continue
-        alias_label, members = ln.split(':', 1)
-        alias_label = alias_label.strip()
-        for member in members.split(','):
-            orig = member.strip()
-            if orig:
-                alias_map[orig] = alias_label
-    return alias_map
+        names: List[str] = []
+        if '|' in raw:
+            names = [part.strip() for part in raw.split('|') if part.strip()]
+        elif ':' in raw:
+            label, members = raw.split(':', 1)
+            names = [label.strip()] + [m.strip() for m in members.split(',') if m.strip()]
+        if not names:
+            continue
+        primary = names[0]
+        aliases = set(names)
+        for alias in aliases:
+            alias_to_primary[alias] = primary
+        if primary in primary_to_aliases:
+            primary_to_aliases[primary].update(aliases)
+        else:
+            primary_to_aliases[primary] = set(aliases)
+    return alias_to_primary, primary_to_aliases
+
+
+def load_remove_set(remove_path: Path,
+                    alias_to_primary: dict,
+                    primary_to_aliases: dict) -> set:
+    remove_set = set()
+    if not remove_path.exists():
+        return remove_set
+    for raw in remove_path.read_text(encoding='utf-8').splitlines():
+        name = raw.strip()
+        if not name:
+            continue
+        primary = alias_to_primary.get(name, name)
+        remove_set.add(primary)
+        remove_set.update(primary_to_aliases.get(primary, {primary}))
+    return remove_set
 # ---------------------------------------------
 
 # ---------------- Gender-CNN ------------------
@@ -266,12 +294,18 @@ def compute_embedding(app: FaceAnalysis,
 # ----------------- Pipeline -----------------
 
 def encode(args) -> None:
-    alias_map = load_aliases(MERGE_TXT)
+    alias_map, primary_aliases = load_aliases(MERGE_TXT)
+    remove_set = load_remove_set(REMOVE_TXT, alias_map, primary_aliases)
     data_root = Path(args.data_root)
     workdir = Path(args.workdir); workdir.mkdir(parents=True, exist_ok=True)
     emb_path = workdir/EMB_PKL; proc_path = workdir/PROC_JSONL
     X,y = load_embeddings(emb_path); processed=load_processed(proc_path)
-    all_imgs=[(p, alias_map.get(lbl,lbl)) for p,lbl in iter_images(data_root)]
+    all_imgs = []
+    for path, label in iter_images(data_root):
+        primary = alias_map.get(label, label)
+        if primary in remove_set:
+            continue
+        all_imgs.append((path, primary))
     todo=[(p,lbl) for p,lbl in all_imgs if p not in processed]
     if not todo:
         print("✅ Inget att göra – allt är redan processat.")
