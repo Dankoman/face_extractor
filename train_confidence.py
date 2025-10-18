@@ -36,6 +36,34 @@ def load_embeddings(path: Path) -> Tuple[np.ndarray, np.ndarray]:
     return X, y
 
 
+def load_aliases(path: Path) -> Dict[str, List[str]]:
+    if not path.exists():
+        return {}
+    primary_to_aliases: Dict[str, set] = {}
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        raw = raw.strip()
+        if not raw:
+            continue
+        if "|" in raw:
+            names = [segment.strip() for segment in raw.split("|") if segment.strip()]
+        elif ":" in raw:
+            label, members = raw.split(":", 1)
+            names = [label.strip()] + [m.strip() for m in members.split(",") if m.strip()]
+        else:
+            names = [raw]
+        if not names:
+            continue
+        primary = names[0]
+        aliases = primary_to_aliases.setdefault(primary, set())
+        aliases.update(names)
+    alias_map: Dict[str, List[str]] = {}
+    for primary, names in primary_to_aliases.items():
+        cleaned = sorted(name for name in names if name != primary)
+        if cleaned:
+            alias_map[primary] = cleaned
+    return alias_map
+
+
 def cosine_similarity_to_centroid(vectors: np.ndarray) -> Tuple[np.ndarray, float]:
     centroid = vectors.mean(axis=0)
     centroid_norm = np.linalg.norm(centroid)
@@ -73,7 +101,7 @@ def write_csv(path: Path, rows: Iterable[Dict[str, float]]) -> None:
     rows = list(rows)
     if not rows:
         return
-    keys = ["label", "count", "min", "median", "mean", "max", "std", "centroid_norm"]
+    keys = ["label", "count", "min", "median", "mean", "max", "std", "centroid_norm", "aliases"]
     with path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=keys)
         writer.writeheader()
@@ -110,23 +138,34 @@ def main() -> None:
         action="store_true",
         help="Skriv hela tabellen till CSV i stället för filtrerat urval",
     )
+    ap.add_argument(
+        "--merge",
+        type=Path,
+        default=Path("merge.txt"),
+        help="Merge-fil för att lista alias (default: merge.txt)",
+    )
     args = ap.parse_args()
 
     X, y = load_embeddings(args.embeddings)
     stats = aggregate_stats(X, y)
+    alias_lookup = load_aliases(args.merge)
+    for row in stats:
+        aliases = alias_lookup.get(row["label"], [])
+        row["aliases"] = ", ".join(aliases)
 
     if args.threshold is not None:
         stats_to_show = [row for row in stats if row["min"] < args.threshold]
     else:
         stats_to_show = stats[: args.top]
 
-    header = f"{'label':30s}  {'n':>5s}  {'min':>6s}  {'median':>6s}  {'mean':>6s}  {'std':>6s}"
+    header = f"{'label':30s}  {'n':>5s}  {'min':>6s}  {'median':>6s}  {'mean':>6s}  {'std':>6s}  aliases"
     print(header)
     print("-" * len(header))
     for row in stats_to_show:
+        alias_str = row.get("aliases", "")
         print(
             f"{row['label'][:30]:30s}  {row['count']:5d}  "
-            f"{row['min']:.3f}  {row['median']:.3f}  {row['mean']:.3f}  {row['std']:.3f}"
+            f"{row['min']:.3f}  {row['median']:.3f}  {row['mean']:.3f}  {row['std']:.3f}  {alias_str}"
         )
 
     if args.csv:

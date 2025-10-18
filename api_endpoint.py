@@ -1062,4 +1062,5 @@ if __name__ == "__main__":
     print("🌐 STASHDB_ENDPOINT_DEFAULT:", STASHDB_ENDPOINT_DEFAULT)
     print("🔑 STASHDB_API_KEY:", _mask(STASHDB_API_KEY))
 
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    debug_flag = os.environ.get("FACE_EXTRACTOR_DEBUG", "0").lower() in {"1", "true", "yes", "on"}
+    app.run(host="0.0.0.0", port=5000, debug=debug_flag, use_reloader=False)
