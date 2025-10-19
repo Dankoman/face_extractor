@@ -3,7 +3,6 @@ Amy Moloko|Any Moloko
 Anna Goncharenko|Marit
 Averi Brooks|Avery Brooks
 Blake Eden|Blake Bartelli
-Altea Belinda|Andreea Mantea
 Aspen Martin|Aspen Parker
 Sally Minx|Sapphire
 Angelina Socho|Angelina Sokolova
@@ -36,7 +35,7 @@ Nici Dee|Nici Roxx
 Roxanne Milana|Roxanna Milan
 Samadhi Amour|Mila Amour
 Angel Sky|Sky Angel
-Tracy Delicious|Tracy Lindsay|Tracy Pearl
+Tracy Lindsay|Tracy Delicious|Tracy Pearl
 Annalena Reno|Milena
 Mayuko Ryuzu|Mayuko
 Jezabel Vessir|Jezebel Vessir
@@ -101,12 +100,11 @@ Christina Bella|Cristina Bella
 Beth Morggan|Bethany Morgan
 Aimee Addison|Brenna Bentley
 Eden Aria|Eden Addams|Eden Arya
-Dagmar|Daggy Jane
+Daggy Jane|Dagmar
 Faith Taylor|Faith Goodwill
 Bad Barbi|Bimbo Barbi
 Tina Bond|Tina Reese
 Tilly Hannon|Erin Marie Hogan
-Daisy Marie|Daisy Dukes
 Tracey Lain|Tracey Hein
 Farrah Dahl|Farrah Foxx
 Cami Cole|Cami Miller
@@ -130,7 +128,6 @@ Anna Gold
 Galya Fedorova|Leila Mazz
 Danae Nason|Danae Mari
 Abigail Toyne|Abi Toyne
-Genevieve Gandi|Marianna Merkulova|Arianna Espen
 Alexia Vosse|Payton West
 Aliana Summers|Eliana
 Tara Lynn Foxx|Tara Lynn
@@ -148,13 +145,10 @@ Auntie Trisha|Speedy Bee
 Chloe Lynn|Tiffani Lovely
 Shining Moons|Shining Moon
 Doni Blass|Spring Thomas
-Sofiya Pandora|Mikana|Oksana Rysenko
 Tina Johnson|Tasha Grant
-Summer Breeze|Elizaveta
 Cate Harrington|Sophie Banks
 Alisa Lisa|Lila Nova
 Cassidy Blanc|Cassidy Bliss
-Houston|Tori Karsin
 Gia Love|Jasmine Delatori
 Eva Strauss|Iwia
 Bibi Jones|Britney Beth|BiBi Jones
@@ -215,7 +209,6 @@ Yoha Galvez|Yoha
 Evita de Luna|Sara Rey
 Elizabeth Ann|Elizabeth Anne
 Belle Bond|Bella Bond
-Sweet Cat|Sweet Katie Candy
 Yuliya Kuznetsova|Janet Haven
 Aleska Diamond|Aleksa Diamond|Alexa Diamond
 Jena LaRose|Jena Larose
@@ -230,7 +223,7 @@ Emily Blake|Betty Henry|Limona
 Zara Ryan|Devyn Lux
 Ryanel A|Vita Sidorkina
 Ava Austin|Joana Jake|Betsy Long|Joana Jakes
-Maci Lee|Macy Cartel
+Macy Cartel|Maci Lee
 Coral Aorta|Ruby Song
 Tiffany Holiday|Tiffany Holliday
 Jessica Jaymes|Jessica James
@@ -261,7 +254,7 @@ Jessy Rose|Jessa Rose|Brianna Rose
 Gracie Noel|Grace Noel
 Jasmine Andreas|Dreaming of Zoi
 Katia Martin|Melissa K
-Katsumi|Katsuni
+Katsuni|Katsumi
 Veronica Zemanova|Veronika Zemanova
 Camila Alves|Camila Chix
 Shasta Wonder|Fetish Girl Shasta
@@ -276,8 +269,6 @@ Cinthia Hunter|Lady X
 Rebecca Jane Smyth|Rebecca Jayne
 Ana Foxxx|Anna Foxxx
 Val Keil|Francesca Frigo
-Amina Kiuchi|Akina Sakura
-Marina Jang|Mail Sujeera
 Caesaria A Tatjana|Caesaria
 Elena Gilbert|elena gilbert
 Raven Lee|Raunchy Raven
@@ -292,7 +283,6 @@ Andreina De Luxe|Adriana Deluxe|Andreina Deluxe
 Bella Gray|Bella Grey
 Abigaile Johnson|Amanda Davidson
 Kari K|Kari Milla|Kari Sweets
-Bella Elise Rose|Elise
 Elle Alexandra|Elle
 Sati Sol|Sati
 Venere A|Venere A Slampe
@@ -337,8 +327,8 @@ Agness Miller|Agness
 Riley Ann|Riley Anne
 Charlotte O Ryan|Charlotte Cross
 Ella Storm|El Storm
-Dahlia Taylor|Kylie Kane
-Blanche Summer|Blanche Gaga
+Kylie Kane|Dahlia Taylor
+Blanche Gaga|Blanche Summer
 Ambika Gold|Camilla Moon
 Brittany Banxxx|Brittney Banxxx
 Eugenia Diordiychuk|Katie Fey
@@ -363,14 +353,12 @@ Tanaia Jay|Endlessa Vitality
 Ayla Sky|Ayla Skye
 Shyla Jennings|Shyla
 Aurilee Summers|Aurielee Summers
-Ayelet Zurer|Hannas Honeypot
 Sofia Gucci|Sofia Cucci
 Bysya A|Bysya A Sanja
 Natalie Grace|Demi C Bailey|Demi C
 Chelsea Star|Sasha X-Ray
 Zoey Chandler|Zoey Holloway
 Ava Adams|Ava Addams
-Pepper Kester|Pepper
 Lagoona Blaze|Lagoon Blaze
 Beer Berry|Chen Pai Ling
 Bella Mia|Bella Angel
@@ -411,7 +399,6 @@ Selvaggia|Selvaggia Babe
 Nyomi Marcela|Nyomi Marcella
 Jodi Taylor|Jodie Taylor
 Brandi Kelly|Brittany Kelly
-Beata Undine|Beata
 Raven Heart|Raven Hart
 Victoria Voss|Ally Evans
 Alena Croft|AZBlonde
@@ -473,7 +460,6 @@ Jemma Reseigh|Jemma Louise
 Georgia Sampaio|Georgia
 Maddy Oreilly|Maddy O_Reilly
 Carol Sampaio|Carolina Sampaio
-Courtney Sweet|Liu Love
 Eliza Thorne|Eliza Thorn
 Kayla Kayden|Lacy Spice
 Aiko Hirose|Ayumu Sena
@@ -490,7 +476,6 @@ Aubrey Adams|Aubrey Addams
 Aspen Celeste|Kenna Ryan
 Marry Queen|Miela|Mary
 Kayslee Collins|Jenny McCarthy
-Harley Love|Harley Rose
 Jessie Lynne|Jessie Lynn
 Candy Julia|Gina Russel
 Natasha Malkova|Jade Couture
@@ -550,11 +535,10 @@ Sarah Stokes|Sara Stokes
 Wendy Harper|Angela H
 Scarlet Raven|Scarlett Raven
 Fawna Latrisch|Fawna
-Camille S Darma|Camille Sarah
 Amelia Dorn|Anna Krowe
 Xene Jay|Xene
 Milan Cheek|Milancheek
-Eva Shanti|Taissia Shanti
+Taissia Shanti|Eva Shanti
 Dita von Teese|Dita V
 Effie Balconi|Sofie Style
 Dahlia Sky|Bailey Blue
@@ -583,7 +567,7 @@ Anna Love|Samantha Shine
 Athina Love|Athina
 Aali Kali|Aali Rousseau
 Romy Ulysse|Amelie Belain
-Kira Queen|Elisa Verricci|Elena Rae
+Kira Queen|Elena Rae
 Mary Lin|Mandy Tee
 Viky Lace|Madelina
 Belinda Bee|Bibina Xox
@@ -596,7 +580,6 @@ Vanilla DeVille|Vanilla Deville
 Danni Ferrer|Camila Saint
 Sabrina Lewis|Brii Nicole
 Valerica Steele|Val Steele
-Chrissy Harris|Chrissy Ranay
 Tami Fruit|Tia
 Deborah Francois|Dominno
 Olivia Lush|Lottie Magne
@@ -638,7 +621,6 @@ Britney Blue|Lacey
 Mensia Francis|Mencia Francis|Mercia Francis
 Courtney Shea|Courtney Shae
 Barbie White|Tara Pink
-Angela Salvagno|Elisa Ann
 Samanta Blaze|Samantha Crown
 Sonya Durganova|Tessa Ray
 Nikki Hunter|Nicki Hunter
@@ -668,7 +650,6 @@ Shane Dos Santos|Summer Slate|Summer Stetson
 Crystal Clark|Katie Oriley
 Abbey Rain|Abby Rain
 Cameron Cruz|Cameron Cruise
-Lauren Wood|Scottish Murmurs
 Coco De Mal|Coco de Mal
 Nika bride|Escaped Bride|Runaway Bride
 Isabella Taylor|Isabella De Santos
@@ -685,7 +666,7 @@ Vanda Lust|Vanda
 Dido Angel|Lola Myluv
 Connie Carter|Connie
 Angelika Dawson|Angelika D Nika
-Danielle Soul|Daniella Margot
+Daniella Margot|Danielle Soul
 Annie Lysenko|Annie Anne
 Chanel Heart|Chanel
 Codi Bryant|America Moore
@@ -699,3 +680,5 @@ Gina Ferocious|Gina Ferocius
 Katie Thornton|Tye Thornton
 Stefany Kyler|Nata Paradise
 Elizabeth JoAnne|Nikki Nova
+Genevieve Gandi|Marianna Merkulova
+Rocky Di|Gaia
