@@ -79,7 +79,7 @@ Alexa Mood|Alexa K
 Alexa Tomas|Alexa Thomas
 Olya N|Holli Paige
 Sofilie|Evelyn Jackson
-Avena Segal|Tea|Tea Jul
+Avena Segal|Tea Jul|Tea
 Dani Crush|Ditzi Dani
 Victoria Garin|Foxy Alissa
 Iris Kiss|Iris Kiss Kiss
@@ -235,7 +235,7 @@ Coralie A|Coralie
 Danica Dillon|Danica Dillan
 Judy Smile|Judy Smilz
 Joanne Sweet|Joanna Sweet
-Bernice Berinice|Berinice
+Bernice Berinice|Bernice|Berinice
 Irina Sivalnaya|Irina Sivalna
 Anastasiya Hart|Anastasia Hart
 Yui Satonaka|Miina Kanno
@@ -256,7 +256,7 @@ Jasmine Zee|Zarina Masood|Zarina Massoud
 Hilary Craig|Hilary C|Paula U|Jenna Kseniya|Viktoriia Aliko
 Cinthia Hunter|Lady X
 Rebecca Jane Smyth|Rebecca Jayne
-Ana Foxxx|Anna Foxxx
+Ana Foxxx|Ana Foxx|Anna Foxxx
 Val Keil|Francesca Frigo
 Caesaria A Tatjana|Caesaria
 Elena Gilbert|elena gilbert
@@ -523,7 +523,7 @@ Taissia Shanti|Eva Shanti
 Dita von Teese|Dita V
 Effie Balconi|Sofie Style
 Dahlia Sky|Bailey Blue
-Veronica Radke|Veronika Radke
+Amber Rouge|Veronica Radke|Veronika Radke
 Gianna Jones|Gia Marie
 Em Indica|Emma Indica
 Eve Mendes|Reka
@@ -606,7 +606,7 @@ Sicilia Model|Sicilia
 Jessie Saint|Steve Holmes
 Gia OhMy|Gia Oh My
 Purr Simona|Simona Purr
-Zoey Kush|Tamara Jade
+Zoey Kush|Star|Tamara Jade
 Justine Hanes|Justine
 Latoya|Magy|Silvia Jons
 Sofia Suarez|Amber Emm
@@ -644,7 +644,7 @@ Connie Carter|Connie
 Angelika Dawson|Angelika D Nika
 Daniella Margot|Danielle Soul
 Annie Lysenko|Annie Anne
-Chanel Heart|Chanel
+Chanell Heart|Chanel Heart|Chanel
 Codi Bryant|America Moore
 Bella Baby|Bella Anne
 Epiphany Dring|Epiphany Drig
@@ -680,3 +680,15 @@ Victoria Rae Black|Victoria Rae
 Liona Levi|Lil Tammy
 Cosette Ibarra|Alina Henessy
 Bella Rose|Bella Elise Rose
+Hailey Rose|Harley Rose
+Jessy Brown|Rosemary Moyer
+Mail Sujeera|Marina Jang
+Sofiya Pandora|Oksana Rysenko
+Chanel Kiss|Victoria Angel
+Megan Medellin|Eve Marlowe
+Denice K|Denice Dark
+Capri Cavanni|Capri Cavalli
+LaTaya Roxx|Lataya Roxx
+Vanessa Decker|Vanessa Dee
+Lucie N|Lucie Nunvarova|Lucy Stevens
+Kaci Starr|Kaci Star
