@@ -16,7 +16,7 @@ labs = list(centroids.keys())
 C = np.vstack([centroids[l] for l in labs])
 S = cosine_similarity(C)              # (L, L), L = antal mappar
 
-THR = 0.65
+THR = 0.49
 MAX_ROWS = 50
 pairs = []
 for i in range(len(labs)):
