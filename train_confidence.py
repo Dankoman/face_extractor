@@ -11,7 +11,7 @@ Exempel:
     python train_confidence.py --top 50
     python train_confidence.py --threshold 0.55 --csv low_confidence.csv
 
-`--top` visar de labels som har lägst `min`-likhet. `--threshold` filtrerar
+`--top` visar de labels som har lägst `centroid_norm`. `--threshold` filtrerar
 istället på en absolut nivå. Med `--csv` får du (per default) samma urval
 som skrivs i konsolen; lägg till `--csv-full` om du vill dumpa hela tabellen.
 """
@@ -93,7 +93,7 @@ def aggregate_stats(X: np.ndarray, y: np.ndarray) -> List[Dict[str, float]]:
                 "centroid_norm": float(centroid_norm),
             }
         )
-    stats.sort(key=lambda row: row["min"])  # lägst först
+    stats.sort(key=lambda row: row["centroid_norm"])  # lägst centroid först
     return stats
 
 
@@ -120,7 +120,7 @@ def main() -> None:
         "--top",
         type=int,
         default=50,
-        help="Visa N rader med lägst min-likhet",
+        help="Visa N rader med lägst centroid_norm",
     )
     ap.add_argument(
         "--threshold",
