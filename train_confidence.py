@@ -144,6 +144,11 @@ def main() -> None:
         default=Path("merge.txt"),
         help="Merge-fil för att lista alias (default: merge.txt)",
     )
+    ap.add_argument(
+        "--missing-aliases-only",
+        action="store_true",
+        help="Visa bara labels som saknar alias i merge-filen",
+    )
     args = ap.parse_args()
 
     X, y = load_embeddings(args.embeddings)
@@ -152,6 +157,9 @@ def main() -> None:
     for row in stats:
         aliases = alias_lookup.get(row["label"], [])
         row["aliases"] = ", ".join(aliases)
+
+    if args.missing_aliases_only:
+        stats = [row for row in stats if not alias_lookup.get(row["label"])]
 
     if args.threshold is not None:
         stats_to_show = [row for row in stats if row["min"] < args.threshold]
