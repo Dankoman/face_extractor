@@ -34,10 +34,12 @@ function run_step
     end
 end
 
-run_step "[1/5] Pre-clean processed JSONL" $PYTHON remove_processed.py --processed $PROCESSED_JSON --remove $REMOVE_FILE --merge $MERGE_FILE
-run_step "[2/5] Pre-clean embeddings" $PYTHON remove.py --embeddings $EMBEDDINGS_PKL --remove $REMOVE_FILE --merge $MERGE_FILE --no-alias
-run_step "[3/5] Encode fresh embeddings" $PYTHON face_arc_pipeline.py --mode encode --data-root $DATA_ROOT --workdir $WORKDIR --allow-upsample --verbose
-run_step "[4/5] Merge aliases" $PYTHON merge.py
-run_step "[5/5] Train KNN model" $PYTHON face_arc_pipeline.py --mode train --embeddings $MERGED_EMBEDDINGS --model-out $MODEL_OUT
+run_step "[1/7] Merge aliases (pre-run)" $PYTHON merge.py
+run_step "[2/7] Pre-clean processed JSONL" $PYTHON remove_processed.py --processed $PROCESSED_JSON --remove $REMOVE_FILE --merge $MERGE_FILE
+run_step "[3/7] Pre-clean embeddings" $PYTHON remove.py --embeddings $EMBEDDINGS_PKL --remove $REMOVE_FILE --merge $MERGE_FILE --no-alias
+run_step "[4/7] Encode fresh embeddings" $PYTHON face_arc_pipeline.py --mode encode --data-root $DATA_ROOT --workdir $WORKDIR --allow-upsample --verbose
+run_step "[5/7] Merge aliases (post-encode)" $PYTHON merge.py
+run_step "[6/7] Train KNN model" $PYTHON face_arc_pipeline.py --mode train --embeddings $MERGED_EMBEDDINGS --model-out $MODEL_OUT
+run_step "[7/7] Normalize & move alias files" $PYTHON alias_cleanup.py --data-root $DATA_ROOT --merge $MERGE_FILE --processed $PROCESSED_JSON --prune-missing --missing-log "$WORKDIR/missing_after_alias_cleanup.txt"
 
 echo "All steps completed."
