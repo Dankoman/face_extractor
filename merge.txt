@@ -187,7 +187,7 @@ Whitney OC|Whitney Oc
 Vanessa Sky|Vanessa Skye
 Dina Envy|Dina D|Dina Soul
 Jasmine Foxxx|Jasmine Foxx
-Kylie Cupcake|Kylie Cupcake Morgan
+Kylie Morgan|Kylie Cupcake|Kylie Cupcake Morgan
 Gia DiBella|Gia Dibella
 Jaye Summers|Charlotte Lee
 Val Dodds|Val Midwest
@@ -541,7 +541,7 @@ Ariana Shaine|Ariana Shine
 Elina De Leon|Elina De Lion
 Viola Weber|Sophie Weber
 Tori Hendrix|Verona Sky
-Skye Wood|Skye Young
+Skye Young|Skye Bloom|Skye Wood
 August Night|August Knight
 Anna Love|Samantha Shine
 Athina Love|Athina
@@ -719,7 +719,7 @@ Kyla Keys|Kaylynn Keys
 Aurora Sky|Avrora Sky
 Kittina Clairette|Kittina Ivory
 Nika Murr|Melania
-April O Neil|April O_Neil
+April O Neil|April ONeil|April O_Neil
 Eleanor Aniko|Eleanor
 Rachel Rocketts|Tawny Peaks
 Ariel Temple|Katarina Muti
@@ -856,3 +856,14 @@ Jessica Patt|Jessica Biel
 Crystall Anne|Jess Harrington
 Natalie Heart|Jaslene Jade
 Valentina Vega|Vixen Vanity
+Serene Kaleesy|Kaleesy|Milka|Serene_Kaleesy
+Scarlet Q|Scarlet
+Sensious
+Alexa Styles|Alexa Rae
+Izabella De Cruz|Izabela De Cruz
+Jenny Diamond|Jenny One
+Sally DAngelo|Summer Angel
+Nina Mercedez|Mercedez
+Marica Hase|Marcia Hase
+Mia Lelani|Mia Leilani
+Cici Rhodes|CiCi Rhodes
