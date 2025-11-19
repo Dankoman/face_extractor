@@ -45,6 +45,9 @@ UPSAMPLE_TARGET_MIN = 180   # minsta sida efter upsampling-försök
 
 K_DEFAULT           = 3
 MIN_PER_CLASS_DEF   = 2
+MAX_ABS_YAW_DEFAULT = 30.0  # max absolut yaw-vinkel (grader) innan vi skippar bilden
+MIN_DET_SCORE_DEFAULT = 0.25  # lägsta detektor-score vi accepterar
+MIN_FOCUS_DEFAULT   = 150.0   # lägsta Laplacian-variance för att inte klassas som suddig
 # ---------------------------------------------
 
 # ------------------ Merge Aliases ------------------
@@ -179,6 +182,9 @@ def compute_embedding(app: FaceAnalysis,
                       img_path: str,
                       allow_fallback: bool,
                       allow_upsample: bool,
+                      max_abs_yaw: Optional[float],
+                      min_det_score: Optional[float],
+                      min_focus: Optional[float],
                       verbose: bool = False) -> tuple[Optional[np.ndarray], int, bool]:
     """Returnerar (embedding, antal detekterade ansikten, fallback användes)."""
     def log(msg: str) -> None:
@@ -235,6 +241,23 @@ def compute_embedding(app: FaceAnalysis,
         return None, n_faces, False
 
     face = faces[0]
+    det_score = float(getattr(face, "det_score", 1.0))
+    log(f"detector score={det_score:.3f}")
+    if min_det_score is not None and det_score < min_det_score:
+        log(f"rejecting due to det_score {det_score:.3f} < {min_det_score:.3f}")
+        return None, 1, False
+
+    if max_abs_yaw is not None:
+        pose = getattr(face, "pose", None)
+        yaw = None
+        if pose is not None and len(pose) >= 2:
+            yaw = float(pose[1])
+            log(f"pose yaw={yaw:.1f}\u00b0")
+            if abs(yaw) > max_abs_yaw:
+                log(f"rejecting due to |yaw|={abs(yaw):.1f}\u00b0 > {max_abs_yaw}\u00b0")
+                return None, 1, False
+        else:
+            log("pose information missing; cannot apply yaw filter")
     h_det, w_det = img_for_det.shape[:2]
     x1, y1, x2, y2 = face.bbox.astype(int)
     x1, y1, x2, y2 = max(x1, 0), max(y1, 0), min(x2, w_det), min(y2, h_det)
@@ -246,6 +269,14 @@ def compute_embedding(app: FaceAnalysis,
     if face_crop.size == 0:
         log("face crop is empty")
         return None, 1, False
+
+    if min_focus is not None and min_focus > 0:
+        gray = cv2.cvtColor(face_crop, cv2.COLOR_BGR2GRAY)
+        focus = float(cv2.Laplacian(gray, cv2.CV_64F).var())
+        log(f"focus variance={focus:.1f}")
+        if focus < min_focus:
+            log(f"rejecting due to focus variance {focus:.1f} < {min_focus}")
+            return None, 1, False
 
     try:
         blob = cv2.dnn.blobFromImage(face_crop, 1.0, (227, 227), (78.426, 87.768, 114.895), swapRB=False)
@@ -291,6 +322,9 @@ def encode(args) -> None:
                 emb, n, fb = compute_embedding(
                     app, rec_model, path,
                     args.allow_fallback, args.allow_upsample,
+                    args.max_yaw,
+                    args.min_det_score,
+                    args.min_focus,
                     verbose=args.verbose
                 )
                 ok = emb is not None
@@ -364,8 +398,32 @@ def main():
     ap.add_argument("--min-per-class",type=int,default=MIN_PER_CLASS_DEF)
     ap.add_argument("--allow-fallback",action="store_true")
     ap.add_argument("--allow-upsample",action="store_true")
+    ap.add_argument(
+        "--max-yaw",
+        type=float,
+        default=MAX_ABS_YAW_DEFAULT,
+        help="Max absolut yaw-vinkel (grader) som accepteras; sätt <=0 för att stänga av filtret",
+    )
+    ap.add_argument(
+        "--min-det-score",
+        type=float,
+        default=MIN_DET_SCORE_DEFAULT,
+        help="Minsta SCRFD-detektionsscore som accepteras; sätt <=0 för att stänga av",
+    )
+    ap.add_argument(
+        "--min-focus",
+        type=float,
+        default=MIN_FOCUS_DEFAULT,
+        help="Minsta Laplacian-variance på face crop (suddighetsfilter); sätt <=0 för att stänga av",
+    )
     ap.add_argument("--verbose", action="store_true")
     args=ap.parse_args();EMB_PKL=args.embeddings
+    if args.max_yaw is not None and args.max_yaw <= 0:
+        args.max_yaw = None
+    if args.min_det_score is not None and args.min_det_score <= 0:
+        args.min_det_score = None
+    if args.min_focus is not None and args.min_focus <= 0:
+        args.min_focus = None
     if args.mode in ("encode","both"): encode(args)
     if args.mode in ("train","both"): train(args)
 
