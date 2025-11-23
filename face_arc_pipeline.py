@@ -16,6 +16,7 @@ import sys
 import json
 import pickle
 import argparse
+import math
 from pathlib import Path
 from typing import List, Tuple, Optional, Dict, Set
 
@@ -45,9 +46,19 @@ UPSAMPLE_TARGET_MIN = 180   # minsta sida efter upsampling-försök
 
 K_DEFAULT           = 3
 MIN_PER_CLASS_DEF   = 2
-MAX_ABS_YAW_DEFAULT = 30.0  # max absolut yaw-vinkel (grader) innan vi skippar bilden
+MAX_ABS_YAW_DEFAULT = 35.0  # max absolut yaw-vinkel (grader) innan vi skippar bilden
 MIN_DET_SCORE_DEFAULT = 0.25  # lägsta detektor-score vi accepterar
 MIN_FOCUS_DEFAULT   = 150.0   # lägsta Laplacian-variance för att inte klassas som suddig
+MODEL_3D_5POINTS = np.array(
+    [
+        (-30.0,  0.0, -30.0),  # left eye
+        ( 30.0,  0.0, -30.0),  # right eye
+        (  0.0,  0.0,   0.0),  # nose
+        (-20.0, -35.0, -30.0), # left mouth
+        ( 20.0, -35.0, -30.0), # right mouth
+    ],
+    dtype=np.float32,
+)
 # ---------------------------------------------
 
 # ------------------ Merge Aliases ------------------
@@ -175,6 +186,45 @@ def get_embedding_direct(rec_model, img_rgb: np.ndarray) -> Optional[np.ndarray]
         return None
     return emb.astype(np.float32)
 
+
+def estimate_yaw_from_kps(kps: Optional[np.ndarray], width: int, height: int) -> Optional[float]:
+    if kps is None or len(kps) < 5:
+        return None
+    focal = float(max(width, height))
+    if focal <= 0:
+        return None
+    image_points = np.array(kps, dtype=np.float32)
+    center = np.array([width / 2.0, height / 2.0], dtype=np.float32)
+    camera_matrix = np.array(
+        [
+            [focal, 0, center[0]],
+            [0, focal, center[1]],
+            [0, 0, 1],
+        ],
+        dtype=np.float32,
+    )
+    dist_coeffs = np.zeros((4, 1), dtype=np.float32)
+    try:
+        success, rotation_vec, translation_vec = cv2.solvePnP(
+            MODEL_3D_5POINTS,
+            image_points,
+            camera_matrix,
+            dist_coeffs,
+            flags=cv2.SOLVEPNP_EPNP,
+        )
+    except cv2.error:
+        return None
+    if not success:
+        return None
+    rot_mat, _ = cv2.Rodrigues(rotation_vec)
+    proj = np.hstack((rot_mat, translation_vec))
+    try:
+        *_unused, euler_angles = cv2.decomposeProjectionMatrix(proj)
+    except cv2.error:
+        return None
+    yaw = float(euler_angles[1]) if euler_angles is not None and len(euler_angles) >= 2 else None
+    return yaw
+
 # ----------- Embedding-funktion -----------
 
 def compute_embedding(app: FaceAnalysis,
@@ -241,6 +291,7 @@ def compute_embedding(app: FaceAnalysis,
         return None, n_faces, False
 
     face = faces[0]
+    h_det, w_det = img_for_det.shape[:2]
     det_score = float(getattr(face, "det_score", 1.0))
     log(f"detector score={det_score:.3f}")
     if min_det_score is not None and det_score < min_det_score:
@@ -253,12 +304,21 @@ def compute_embedding(app: FaceAnalysis,
         if pose is not None and len(pose) >= 2:
             yaw = float(pose[1])
             log(f"pose yaw={yaw:.1f}\u00b0")
-            if abs(yaw) > max_abs_yaw:
-                log(f"rejecting due to |yaw|={abs(yaw):.1f}\u00b0 > {max_abs_yaw}\u00b0")
-                return None, 1, False
-        else:
+        if yaw is None:
+            kps = getattr(face, "kps", None)
+            if kps is not None:
+                yaw = estimate_yaw_from_kps(kps, w_det, h_det)
+                if yaw is not None:
+                    log(f"estimated yaw from landmarks={yaw:.1f}\u00b0")
+                else:
+                    log("failed to estimate yaw from landmarks")
+            else:
+                log("no landmarks available for yaw estimation")
+        if yaw is None:
             log("pose information missing; cannot apply yaw filter")
-    h_det, w_det = img_for_det.shape[:2]
+        elif abs(yaw) > max_abs_yaw:
+            log(f"rejecting due to |yaw|={abs(yaw):.1f}\u00b0 > {max_abs_yaw}\u00b0")
+            return None, 1, False
     x1, y1, x2, y2 = face.bbox.astype(int)
     x1, y1, x2, y2 = max(x1, 0), max(y1, 0), min(x2, w_det), min(y2, h_det)
     if x2 <= x1 or y2 <= y1:
