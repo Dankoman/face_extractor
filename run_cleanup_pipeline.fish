@@ -49,7 +49,7 @@ run_step "[1/7] Apply merge candidates" $PYTHON apply_merge_candidates.py --merg
 run_step_if_exists "[2/7] Pre-clean processed JSONL" $PROCESSED_JSON \
     $PYTHON remove_processed.py --processed $PROCESSED_JSON --remove $REMOVE_FILE --merge $MERGE_FILE
 run_step_if_exists "[3/7] Pre-clean embeddings" $EMBEDDINGS_PKL \
-    $PYTHON remove.py --embeddings $EMBEDDINGS_PKL --remove $REMOVE_FILE --merge $MERGE_FILE --no-alias
+    $PYTHON remove.py --embeddings $EMBEDDINGS_PKL --remove $REMOVE_FILE --merge $MERGE_FILE
 run_step "[4/7] Encode fresh embeddings" $PYTHON face_arc_pipeline.py --mode encode --data-root $DATA_ROOT --workdir $WORKDIR --allow-upsample --verbose --max-yaw 40
 run_step "[5/7] Merge aliases" $PYTHON merge.py
 run_step "[6/7] Train KNN model" $PYTHON face_arc_pipeline.py --mode train --embeddings $MERGED_EMBEDDINGS --model-out $MODEL_OUT

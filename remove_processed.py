@@ -43,6 +43,7 @@ def main() -> None:
     parser.add_argument("--processed", default="arcface_work-ppic/processed-ppic.jsonl", help="JSONL-fil att filtrera")
     parser.add_argument("--remove", default="remove.txt", help="Textfil med namn att ta bort")
     parser.add_argument("--merge", default="merge.txt", help="Aliasfil (pipe-separerad)")
+    parser.add_argument("--no-alias", action="store_true", help="Utöka inte alias – ta bara bort exakt angivna namn")
     args = parser.parse_args()
 
     processed_path = Path(args.processed)
@@ -55,8 +56,14 @@ def main() -> None:
         raise SystemExit(f"Hittar inte remove-filen: {remove_path}")
 
     remove_names = read_lines(remove_path)
-    alias_to_primary, primary_to_aliases = load_alias_map(merge_path)
-    expanded_remove, counters = expand_remove_set(remove_names, alias_to_primary, primary_to_aliases)
+    if args.no_alias:
+        alias_to_primary = {}
+        primary_to_aliases = {}
+        expanded_remove = set(remove_names)
+        counters = {name: 0 for name in remove_names}
+    else:
+        alias_to_primary, primary_to_aliases = load_alias_map(merge_path)
+        expanded_remove, counters = expand_remove_set(remove_names, alias_to_primary, primary_to_aliases)
 
     tmp_path = processed_path.with_suffix(processed_path.suffix + ".tmp")
 

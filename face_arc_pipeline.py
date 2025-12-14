@@ -222,7 +222,11 @@ def estimate_yaw_from_kps(kps: Optional[np.ndarray], width: int, height: int) ->
         *_unused, euler_angles = cv2.decomposeProjectionMatrix(proj)
     except cv2.error:
         return None
-    yaw = float(euler_angles[1]) if euler_angles is not None and len(euler_angles) >= 2 else None
+    # euler_angles är (3,1); välj elementet explicit för att undvika NumPy-scalar warning
+    if euler_angles is not None and euler_angles.size >= 2:
+        yaw = float(euler_angles[1, 0])
+    else:
+        yaw = None
     return yaw
 
 # ----------- Embedding-funktion -----------

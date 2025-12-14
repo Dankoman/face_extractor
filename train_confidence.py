@@ -21,7 +21,7 @@ import argparse
 import csv
 import pickle
 from pathlib import Path
-from typing import Dict, Iterable, List, Tuple
+from typing import Dict, Iterable, List, Optional, Tuple
 
 import numpy as np
 
@@ -75,12 +75,29 @@ def cosine_similarity_to_centroid(vectors: np.ndarray) -> Tuple[np.ndarray, floa
     return sims, centroid_norm
 
 
-def aggregate_stats(X: np.ndarray, y: np.ndarray) -> List[Dict[str, float]]:
+def compute_label_stats(
+    X: np.ndarray, y: np.ndarray
+) -> Tuple[List[Dict[str, float]], np.ndarray, np.ndarray]:
+    """
+    Beräknar statistik per label och returnerar även centroider för vidare beräkningar.
+
+    Returns:
+        stats: list med label-statistik (sorterad på centroid_norm)
+        labels: ndarray med labels i samma ordning som centroids
+        centroids: ndarray med normaliserade centroidvektorer (shape: n_labels x dim)
+    """
     stats: List[Dict[str, float]] = []
-    for label in np.unique(y):
+    centroids: List[np.ndarray] = []
+    labels = np.unique(y)
+    for label in labels:
         mask = y == label
         vectors = X[mask]
         sims, centroid_norm = cosine_similarity_to_centroid(vectors)
+        if centroid_norm == 0:
+            centroid_unit = np.zeros_like(vectors[0]) if len(vectors) else np.array([], dtype=np.float32)
+        else:
+            centroid_unit = (vectors.mean(axis=0) / centroid_norm).astype(np.float32)
+        centroids.append(centroid_unit)
         stats.append(
             {
                 "label": label,
@@ -94,7 +111,7 @@ def aggregate_stats(X: np.ndarray, y: np.ndarray) -> List[Dict[str, float]]:
             }
         )
     stats.sort(key=lambda row: row["centroid_norm"])  # lägst centroid först
-    return stats
+    return stats, labels, np.vstack(centroids) if centroids else np.empty((0, X.shape[1]), dtype=np.float32)
 
 
 def write_csv(path: Path, rows: Iterable[Dict[str, float]]) -> None:
@@ -106,6 +123,81 @@ def write_csv(path: Path, rows: Iterable[Dict[str, float]]) -> None:
         writer = csv.DictWriter(f, fieldnames=keys)
         writer.writeheader()
         writer.writerows(rows)
+
+
+def load_paths_from_processed_json(proc_path: Path) -> List[str]:
+    """Ren JSON-variant av loader (säker och rak)."""
+    if not proc_path.exists():
+        print(f"⚠️ Hittade ingen processed-fil: {proc_path}")
+        return []
+    ok_paths: List[str] = []
+    import json
+
+    for raw in proc_path.read_text(encoding="utf-8").splitlines():
+        raw = raw.strip()
+        if not raw:
+            continue
+        try:
+            rec = json.loads(raw)
+        except Exception:
+            continue
+        if rec.get("ok"):
+            ok_paths.append(rec["path"])
+    return ok_paths
+
+
+def write_per_image_csv(
+    path: Path, rows: List[Dict[str, object]], include_header: Optional[List[str]] = None
+) -> None:
+    if not rows:
+        return
+    keys = include_header or list(rows[0].keys())
+    with path.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=keys)
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def build_per_image_rows(
+    X: np.ndarray,
+    y: np.ndarray,
+    labels: np.ndarray,
+    centroids: np.ndarray,
+    paths: Optional[List[str]] = None,
+) -> List[Dict[str, object]]:
+    """
+    Returnerar en rad per embedding med:
+    - path (om känd)
+    - label
+    - confidence mot egen centroid
+    - top_label och top_confidence (närmsta centroid)
+    - delta och mismatch-flagga
+    """
+    if labels.size == 0 or centroids.size == 0:
+        return []
+    label_to_idx = {label: i for i, label in enumerate(labels)}
+    sims = X @ centroids.T  # shape: n_samples x n_labels
+    own_idx = np.array([label_to_idx[label] for label in y])
+    own_conf = sims[np.arange(len(X)), own_idx]
+    best_idx = sims.argmax(axis=1)
+    top_labels = labels[best_idx]
+    top_conf = sims[np.arange(len(X)), best_idx]
+
+    rows: List[Dict[str, object]] = []
+    for i in range(len(X)):
+        path = paths[i] if paths and i < len(paths) else ""
+        rows.append(
+            {
+                "path": path,
+                "label": y[i],
+                "confidence": float(own_conf[i]),
+                "top_label": top_labels[i],
+                "top_confidence": float(top_conf[i]),
+                "delta": float(top_conf[i] - own_conf[i]),
+                "mismatch": "yes" if top_labels[i] != y[i] else "",
+            }
+        )
+    return rows
 
 
 def main() -> None:
@@ -149,10 +241,21 @@ def main() -> None:
         action="store_true",
         help="Visa bara labels som saknar alias i merge-filen",
     )
+    ap.add_argument(
+        "--csv-per-image",
+        type=Path,
+        help="Skriv per-bild confidence till CSV (kolumner: path, label, confidence, top_label, top_confidence, delta, mismatch)",
+    )
+    ap.add_argument(
+        "--processed",
+        type=Path,
+        default=None,
+        help="processed-*.jsonl för att hämta paths (default: samma katalog som embeddings, processed-ppic.jsonl)",
+    )
     args = ap.parse_args()
 
     X, y = load_embeddings(args.embeddings)
-    stats = aggregate_stats(X, y)
+    stats, labels, centroids = compute_label_stats(X, y)
     alias_lookup = load_aliases(args.merge)
     for row in stats:
         aliases = alias_lookup.get(row["label"], [])
@@ -180,6 +283,19 @@ def main() -> None:
         rows_for_csv = stats if args.csv_full else stats_to_show
         write_csv(args.csv, rows_for_csv)
         print(f"\nSkrev {len(rows_for_csv)} rader till {args.csv}")
+
+    if args.csv_per_image:
+        default_processed = args.embeddings.parent / "processed-ppic.jsonl"
+        proc_path = args.processed or default_processed
+        paths = load_paths_from_processed_json(proc_path)
+        if len(paths) != len(y):
+            print(
+                f"⚠️ Antal paths i {proc_path} ({len(paths)}) matchar inte embeddings ({len(y)}). "
+                "Fortsätter ändå (saknade paths lämnas tomma)."
+            )
+        rows = build_per_image_rows(X, y, labels, centroids, paths)
+        write_per_image_csv(args.csv_per_image, rows, ["path", "label", "confidence", "top_label", "top_confidence", "delta", "mismatch"])
+        print(f"Skrev {len(rows)} per-bildrader till {args.csv_per_image}")
 
 
 if __name__ == "__main__":
