@@ -23,3 +23,7 @@ arcface_work-ppic/processed-ppic.*
 male_faces.csv
 male_faces.ods
 arcface_work-ppic/missing_after_alias_cleanup.txt
+low_confidence_images.csv
+low_confidence_images.ods
+low_confidence_merged.csv
+low_confidence_merged.csv
