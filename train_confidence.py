@@ -186,9 +186,11 @@ def build_per_image_rows(
     rows: List[Dict[str, object]] = []
     for i in range(len(X)):
         path = paths[i] if paths and i < len(paths) else ""
+        folder_name = Path(path).parent.name if path else ""
         rows.append(
             {
                 "path": path,
+                "folder_name": folder_name,
                 "label": y[i],
                 "confidence": float(own_conf[i]),
                 "top_label": top_labels[i],
@@ -294,7 +296,7 @@ def main() -> None:
                 "Fortsätter ändå (saknade paths lämnas tomma)."
             )
         rows = build_per_image_rows(X, y, labels, centroids, paths)
-        write_per_image_csv(args.csv_per_image, rows, ["path", "label", "confidence", "top_label", "top_confidence", "delta", "mismatch"])
+        write_per_image_csv(args.csv_per_image, rows, ["path", "folder_name", "label", "confidence", "top_label", "top_confidence", "delta", "mismatch"])
         print(f"Skrev {len(rows)} per-bildrader till {args.csv_per_image}")
 
 

@@ -519,7 +519,7 @@ Amelia Dorn|Anna Krowe
 Xene Jay|Xene
 Milan Cheek|Milancheek
 Taissia Shanti|Eva Shanti
-Dita von Teese|Dita V
+Dita von Teese|Dita V Inga|Dita V
 Effie Balconi|Sofie Style
 Dahlia Sky|Bailey Blue
 Amber Rouge|Veronica Radke|Veronika Radke
@@ -652,7 +652,7 @@ Gia DiMarco|Gianna DiMarco
 Diana Doll|Diana Diamond
 Kali Roses|Kali Rose
 Gina Ferocious|Mina Moreno|Gina Ferocius
-Katie Thornton|Tye Thornton
+Katie Rose|Katie Thornton|Katy Rose|Tye Thornton
 Stefany Kyler|Nata Paradise
 Elizabeth JoAnne|Nikki Nova
 Genevieve Gandi|Marianna Merkulova
@@ -677,7 +677,7 @@ Amara Bhunawat|Amara Ranipas
 Gena Miller|Sylvia Belotti
 Victoria Rae|Victoria Rae Black
 Liona Levi|Lil Tammy
-Cosette Ibarra|Alina Henessy
+Henessy|Cosette Ibarra|Alina Henessy
 Bella Rose|Bella Elise Rose
 Hailey Rose|Harley Rose
 Jessy Brown|Rosemary Moyer
@@ -844,7 +844,7 @@ Violette Price|Alina Lamour|Ria River
 Diana Douglas|Diana Gold
 Valerie Rose|Emerald Rose
 Lovenia Lux|Bailey Devonish
-Jessica Wild|Jessica Hot
+Jessica Wild|Jessika Wild|Jessica Hot
 Wild Devil|Ella Wild
 Samantha Rone|Alex Davis
 Deniska|Angelina Love
@@ -888,7 +888,7 @@ Kelly Norton|Katerina
 Annika Eve|Caroline Ray
 Donna Derriere|Donna Denniere
 Gasha Yulia|Bibi Pink
-Valentina Velasquez|Valentina Velasques
+Valentina Velasques|Valentina Velasquez
 Silvie Delux|Silvie Deluxe
 Lily LaBeau|Lily Labeau
 Ira Verber|Ira Mayan
@@ -904,3 +904,6 @@ Nastya H|Paloma Dasha
 Cassidy Klein|Bridget Bond
 Jennifer Love|Florina Rose
 Nikia Ahe|Nikia A
+Traci Danee|Traci Denee
+Mary Jane Mayhem|Maryjane Mayhem
+Candy Caine|Candy Love

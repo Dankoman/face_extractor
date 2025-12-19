@@ -35,9 +35,13 @@ pkgs.mkShell {
     fi
     source .venv/bin/activate
 
-    pip install --upgrade pip
-    pip install --no-cache-dir onnxruntime insightface opencv-python-headless==4.12.0.88 numpy flask flask-cors
+    if [ -z "$SKIP_PIP" ]; then
+      pip install --upgrade pip
+      pip install --no-cache-dir onnxruntime insightface opencv-python-headless==4.12.0.88 numpy flask flask-cors
+    fi
     
-    python api_endpoint.py
+    if [ -z "$SKIP_API" ]; then
+      python api_endpoint.py
+    fi
   '';
 }
