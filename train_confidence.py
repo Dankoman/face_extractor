@@ -254,11 +254,31 @@ def main() -> None:
         default=None,
         help="processed-*.jsonl för att hämta paths (default: samma katalog som embeddings, processed-ppic.jsonl)",
     )
+    ap.add_argument(
+        "--data-root",
+        type=Path,
+        default=Path("/home/marqs/Bilder/pBook"),
+        help="Rotkatalog för bilder (används för att filtrera bort namn utan mapp)",
+    )
     args = ap.parse_args()
 
     X, y = load_embeddings(args.embeddings)
     stats, labels, centroids = compute_label_stats(X, y)
     alias_lookup = load_aliases(args.merge)
+    
+    # Filtrera bort labels som inte har en fysisk mapp
+    if args.data_root and args.data_root.exists():
+        existing_labels = {
+            label for label in labels 
+            if (args.data_root / label).is_dir()
+        }
+        # Vi behåller stats bara för de som finns
+        stats = [s for s in stats if s["label"] in existing_labels]
+        # Uppdatera även labels referensen om vi ska använda den senare, 
+        # men stats_to_show baseras på stats
+    else:
+        existing_labels = set(labels)
+
     for row in stats:
         aliases = alias_lookup.get(row["label"], [])
         row["aliases"] = ", ".join(aliases)
@@ -296,6 +316,11 @@ def main() -> None:
                 "Fortsätter ändå (saknade paths lämnas tomma)."
             )
         rows = build_per_image_rows(X, y, labels, centroids, paths)
+        
+        # Filtrera även per-bild-rader på existerande mappar
+        if args.data_root and args.data_root.exists():
+             rows = [r for r in rows if r["label"] in existing_labels]
+             
         write_per_image_csv(args.csv_per_image, rows, ["path", "folder_name", "label", "confidence", "top_label", "top_confidence", "delta", "mismatch"])
         print(f"Skrev {len(rows)} per-bildrader till {args.csv_per_image}")
 
