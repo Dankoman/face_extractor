@@ -290,7 +290,7 @@ Playful Ann|Playful Anne
 Inga Zolva|Inga
 Ferrara Gomez|Ferrera Gomez
 Carmen Joy|Kelly White
-Kate White|Sweetie Doll|Katarina A
+Sweetie Doll|Kate White|Katarina A
 Safo Ahe|Safo A
 Lilly Klass|Ennie Sweet|Zena Little|Ennie Paris
 Maxa Saloma|Maxa
@@ -357,7 +357,7 @@ Keira Nicole|Cosima Dunkin
 Tia Malkova|Kiki Cyrus
 Elin Flame|Elin Holm
 Edita Recna|Eolita
-Erica Lightspeed|Aneta J
+Erica Lightspeed|Veronika Jin|Aneta J
 Shay VanBurin|Shay Vanburin
 Kaira Love|Sweet Angelina
 Franziska Facella|Franziska|Francesca
@@ -925,3 +925,10 @@ Synthia Fixx|Sinthia Fixx
 Tracy Loves|Tracy Smile
 Angelic Anya|Sweet Lana
 Skyla Novea|Ginger Elle
+Alecia Fox|Alicia Fox
+Kate Rose|Black Angel
+Ellie Tay|Ellie Taylor
+Giada Suicide|Giada Sgh
+Daisy Dolce|Daisy May
+Tanja B Mocky|Calla Angel
+Alena Hemkova|Scarlett Angel
