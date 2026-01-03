@@ -191,7 +191,7 @@ Kylie Morgan|Kylie Cupcake|Kylie Cupcake Morgan
 Gia DiBella|Gia Dibella
 Jaye Summers|Charlotte Lee
 Val Dodds|Val Midwest
-Aila Donovan|Alia Donovan
+Aila Donovan|Tammy Tyler|Alia Donovan
 Holly Gibbons|Holly Gibbson
 Gigi Allens|Gigi Aliens
 Allyssa Hall|Alyssa Hall
@@ -296,7 +296,7 @@ Lilly Klass|Ennie Sweet|Zena Little|Ennie Paris
 Maxa Saloma|Maxa
 Adelia Ahe|Adelia
 Dylann Vox|Skylar Vox
-Sara Luv|Sara Luvv
+Sara Luvv|Sara Luv
 Sara Sloane|Sarah Vandella
 Cleo Marie|Winter Bliss
 AJ Applegate|Kaylee Evans
@@ -357,7 +357,7 @@ Keira Nicole|Cosima Dunkin
 Tia Malkova|Kiki Cyrus
 Elin Flame|Elin Holm
 Edita Recna|Eolita
-Erica Lightspeed|Veronika Jin|Aneta J
+Erica Lightspeed|Veronika|Veronika Jin|Aneta J
 Shay VanBurin|Shay Vanburin
 Kaira Love|Sweet Angelina
 Franziska Facella|Franziska|Francesca
@@ -391,7 +391,7 @@ Raven Heart|Raven Hart
 Victoria Voss|Ally Evans
 Alena Croft|AZBlonde
 Lika Star|Lolly Small
-Goldie Ortiz|Goldie Rush|Goldie Loc
+Goldie Rush|Goldie Ortiz|Goldie Loc
 Leah Maus|Sweet Hole|Alita Angel
 Lily Steele|Lily Steel
 Stella Cox|Stella C
@@ -638,7 +638,7 @@ Sabina Blue|Sabina Blue Nude
 Xo Gisele|Gisele
 Camilla Bella|Camilla Del Rio|Camilla Delai
 Vanda Lust|Vanda
-Dido Angel|Lola Myluv
+Lola Myluv|Dido Angel
 Connie Carter|Connie
 Angelika Dawson|Angelika D Nika
 Daniella Margot|Danielle Soul
@@ -743,7 +743,7 @@ Skyla Ryann|Skyla
 Jana Miartusova|Nella
 Avena Lee|Kaylani Lei
 White Angel|Angel White
-Lilly Love|Lily Love
+Lily Love|Gilda Roberts|Lilly Love
 Lucy Lee|Lucie Lee
 Britta Björk|Samantha Nixon|Comet Nox
 Rebecca Nolan|Veronica Moore
@@ -943,3 +943,9 @@ Rene Bond|Annie Whorehall
 Alex Kane|Sabrina Snow
 Angell Summers|Angel Summers
 Haruka Ohsawa|Haruka Oosawa
+Lola C|Teen Lola 18
+Dakota Rose|Evelyn Bishop
+Hina Kurumi|Sana Anju
+Amber Mae|Anna Jeffries
+Lea Lexis|Lea Lexus
+Merilyn Sakova|Merilyn Sekova
