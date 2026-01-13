@@ -30,7 +30,7 @@ if exclusion_path.exists():
                 # Store as frozenset for order-independence
                 exclusions.add(frozenset([parts[0].strip(), parts[1].strip()]))
 
-THR = 0.49
+THR = 0.40
 MAX_ROWS = 50
 pairs = []
 for i in range(len(labs)):
