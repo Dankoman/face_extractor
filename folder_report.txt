@@ -1,695 +1,56 @@
 Läser in low_confidence_images.csv...
 
-Hittade 333 mappar med potentiella fel (minst 0.65 confidence).
+Hittade 46 mappar med potentiella fel (minst 0.8 confidence).
 
 ------------------------------------------------------------
 Stephanie Swift (27 bilder):
-  ⚠️  23 bilder verkar felaktiga (85.2%)
-      -> 14 st liknar 'Paris Parker' (snitt-conf: 0.78)
-      -> 9 st liknar 'Meggan Mallone' (snitt-conf: 0.78)
-
-Savana Styles (31 bilder):
-  ⚠️  13 bilder verkar felaktiga (41.9%)
-      -> 13 st liknar 'Angelina Diamanti' (snitt-conf: 0.72)
-
-Daggy Jane (27 bilder):
-  ⚠️  13 bilder verkar felaktiga (48.1%)
-      -> 13 st liknar 'Charlene Nicholls' (snitt-conf: 0.77)
-
-Audrey Jane (31 bilder):
-  ⚠️  11 bilder verkar felaktiga (35.5%)
-      -> 11 st liknar 'Sandy Summers' (snitt-conf: 0.72)
-
-Stacy Donovan (10 bilder):
-  ⚠️  9 bilder verkar felaktiga (90.0%)
-      -> 9 st liknar 'Mirabella' (snitt-conf: 0.76)
-
-Amelinda Luna (27 bilder):
-  ⚠️  8 bilder verkar felaktiga (29.6%)
-      -> 8 st liknar 'Teagan Summers' (snitt-conf: 0.77)
+  ⚠️  12 bilder verkar felaktiga (44.4%)
+      -> 7 st liknar 'Paris Parker' (snitt-conf: 0.82)
+      -> 5 st liknar 'Meggan Mallone' (snitt-conf: 0.83)
 
 Jolene Devil (15 bilder):
-  ⚠️  7 bilder verkar felaktiga (46.7%)
-      -> 7 st liknar 'Sydney Screams' (snitt-conf: 0.83)
+  ⚠️  6 bilder verkar felaktiga (40.0%)
+      -> 6 st liknar 'Sydney Screams' (snitt-conf: 0.85)
 
-Tamara N Joy (6 bilder):
-  ⚠️  6 bilder verkar felaktiga (100.0%)
-      -> 6 st liknar 'Meggan Mallone' (snitt-conf: 0.81)
-
-Kety Pearl (35 bilder):
-  ⚠️  5 bilder verkar felaktiga (14.3%)
-      -> 5 st liknar 'Charley Chase' (snitt-conf: 0.74)
-
-Kristian Fox (25 bilder):
-  ⚠️  5 bilder verkar felaktiga (20.0%)
-      -> 5 st liknar 'Charley Chase' (snitt-conf: 0.71)
-
-Danny Hernandez (23 bilder):
-  ⚠️  5 bilder verkar felaktiga (21.7%)
-      -> 5 st liknar 'Elinor Gasset' (snitt-conf: 0.76)
+Stacy Donovan (10 bilder):
+  ⚠️  4 bilder verkar felaktiga (40.0%)
+      -> 4 st liknar 'Mirabella' (snitt-conf: 0.82)
 
 Sofia Damon (50 bilder):
-  ⚠️  5 bilder verkar felaktiga (10.0%)
-      -> 5 st liknar 'Ivy Rain' (snitt-conf: 0.83)
+  ⚠️  4 bilder verkar felaktiga (8.0%)
+      -> 4 st liknar 'Ivy Rain' (snitt-conf: 0.87)
 
-Angel Constance (41 bilder):
-  ⚠️  4 bilder verkar felaktiga (9.8%)
-      -> 4 st liknar 'Brandi Blake' (snitt-conf: 0.70)
+Tamara N Joy (6 bilder):
+  ⚠️  3 bilder verkar felaktiga (50.0%)
+      -> 3 st liknar 'Meggan Mallone' (snitt-conf: 0.86)
+
+Daggy Jane (27 bilder):
+  ⚠️  3 bilder verkar felaktiga (11.1%)
+      -> 3 st liknar 'Charlene Nicholls' (snitt-conf: 0.81)
 
 Ariel Skye (7 bilder):
-  ⚠️  4 bilder verkar felaktiga (57.1%)
-      -> 4 st liknar 'Aria Sky' (snitt-conf: 0.80)
-
-Saki Koto (9 bilder):
-  ⚠️  4 bilder verkar felaktiga (44.4%)
-      -> 4 st liknar 'Emily Love' (snitt-conf: 0.71)
-
-Isabella Herzog (20 bilder):
-  ⚠️  4 bilder verkar felaktiga (20.0%)
-      -> 4 st liknar 'Adriana Chechik' (snitt-conf: 0.76)
-
-Kayla Kiss (16 bilder):
-  ⚠️  3 bilder verkar felaktiga (18.8%)
-      -> 3 st liknar 'Sophia Locke' (snitt-conf: 0.73)
-
-Jessica Donavan (21 bilder):
-  ⚠️  3 bilder verkar felaktiga (14.3%)
-      -> 3 st liknar 'Jenny McCarthy' (snitt-conf: 0.76)
-
-Jesse Jordan (10 bilder):
-  ⚠️  3 bilder verkar felaktiga (30.0%)
-      -> 3 st liknar 'Amy McCarthy' (snitt-conf: 0.78)
-
-Aliza Marcie (19 bilder):
-  ⚠️  3 bilder verkar felaktiga (15.8%)
-      -> 3 st liknar 'Juicy Pearl' (snitt-conf: 0.75)
-
-Daiquiri Divine (9 bilder):
-  ⚠️  3 bilder verkar felaktiga (33.3%)
-      -> 3 st liknar 'Red Fox' (snitt-conf: 0.79)
-
-Tara Braxton (20 bilder):
-  ⚠️  3 bilder verkar felaktiga (15.0%)
-      -> 1 st liknar 'Justine Miller' (snitt-conf: 0.81)
-      -> 1 st liknar 'Dorothy Grant' (snitt-conf: 0.69)
-      -> 1 st liknar 'Ria Rose' (snitt-conf: 0.77)
-
-Vivian West (21 bilder):
-  ⚠️  3 bilder verkar felaktiga (14.3%)
-      -> 3 st liknar 'Tawny Tyler' (snitt-conf: 0.67)
-
-Valentina Vixen (13 bilder):
-  ⚠️  3 bilder verkar felaktiga (23.1%)
-      -> 1 st liknar 'Chloe Cherry' (snitt-conf: 0.73)
-      -> 1 st liknar 'Dee Williams' (snitt-conf: 0.73)
-      -> 1 st liknar 'Spencer Scott' (snitt-conf: 0.68)
-
-Julie Robbins (19 bilder):
-  ⚠️  3 bilder verkar felaktiga (15.8%)
-      -> 3 st liknar 'Alice Romain' (snitt-conf: 0.79)
-
-Sarah Peachez (20 bilder):
-  ⚠️  3 bilder verkar felaktiga (15.0%)
-      -> 3 st liknar 'Angelina Diamanti' (snitt-conf: 0.74)
-
-Carolina Savage (13 bilder):
-  ⚠️  3 bilder verkar felaktiga (23.1%)
-      -> 3 st liknar 'Lily LaBeau' (snitt-conf: 0.71)
-
-Dakota Rae (41 bilder):
-  ⚠️  3 bilder verkar felaktiga (7.3%)
-      -> 3 st liknar 'Lily LaBeau' (snitt-conf: 0.77)
-
-Nata Ocean (30 bilder):
-  ⚠️  2 bilder verkar felaktiga (6.7%)
-      -> 1 st liknar 'Monica Sweetheart' (snitt-conf: 0.65)
-      -> 1 st liknar 'Daphne Rosen' (snitt-conf: 0.70)
-
-Angelica Coralvine (14 bilder):
-  ⚠️  2 bilder verkar felaktiga (14.3%)
-      -> 1 st liknar 'Vanessa Gleason' (snitt-conf: 0.74)
-      -> 1 st liknar 'Christi Taylor' (snitt-conf: 0.66)
-
-Aurelia Perez (11 bilder):
-  ⚠️  2 bilder verkar felaktiga (18.2%)
-      -> 1 st liknar 'Kayla Coyote' (snitt-conf: 0.75)
-      -> 1 st liknar 'Ashlyn Chere' (snitt-conf: 0.76)
+  ⚠️  2 bilder verkar felaktiga (28.6%)
+      -> 2 st liknar 'Aria Sky' (snitt-conf: 0.81)
 
 Bryci (6 bilder):
-  ⚠️  2 bilder verkar felaktiga (33.3%)
-      -> 2 st liknar 'Alexandra Tyler' (snitt-conf: 0.76)
-
-Kimmy Fabel (33 bilder):
-  ⚠️  2 bilder verkar felaktiga (6.1%)
-      -> 2 st liknar 'Sophia Locke' (snitt-conf: 0.75)
-
-Lilu Moon (10 bilder):
-  ⚠️  2 bilder verkar felaktiga (20.0%)
-      -> 2 st liknar 'Cherry Blossom' (snitt-conf: 0.73)
-
-Lola Jolie (64 bilder):
-  ⚠️  2 bilder verkar felaktiga (3.1%)
-      -> 2 st liknar 'Little Caprice' (snitt-conf: 0.68)
-
-Mi Ha Doan (31 bilder):
-  ⚠️  2 bilder verkar felaktiga (6.5%)
-      -> 1 st liknar 'Irina J' (snitt-conf: 0.66)
-      -> 1 st liknar 'Red Fox' (snitt-conf: 0.72)
-
-Stevie Moon (11 bilder):
-  ⚠️  2 bilder verkar felaktiga (18.2%)
-      -> 2 st liknar 'Freya Mayer' (snitt-conf: 0.69)
-
-Valery Leche (17 bilder):
-  ⚠️  2 bilder verkar felaktiga (11.8%)
-      -> 2 st liknar 'Artemida' (snitt-conf: 0.69)
-
-Anna Halo (9 bilder):
-  ⚠️  2 bilder verkar felaktiga (22.2%)
-      -> 2 st liknar 'Yenifer Chp' (snitt-conf: 0.68)
-
-Annalee Belle (10 bilder):
-  ⚠️  2 bilder verkar felaktiga (20.0%)
-      -> 1 st liknar 'Anna Claire Clouds' (snitt-conf: 0.78)
-      -> 1 st liknar 'Anna Khara' (snitt-conf: 0.78)
-
-Judy Ann Santos (6 bilder):
-  ⚠️  2 bilder verkar felaktiga (33.3%)
-      -> 1 st liknar 'Chloe Cherry' (snitt-conf: 0.67)
-      -> 1 st liknar 'Chloe Foster' (snitt-conf: 0.70)
-
-Juliana Rodriguez (8 bilder):
-  ⚠️  2 bilder verkar felaktiga (25.0%)
-      -> 2 st liknar 'Juliana Grandi' (snitt-conf: 0.74)
-
-Angelina Blue (17 bilder):
-  ⚠️  2 bilder verkar felaktiga (11.8%)
-      -> 1 st liknar 'Emma Starr' (snitt-conf: 0.76)
-      -> 1 st liknar 'Binky Bangs' (snitt-conf: 0.68)
-
-Jennique Adams (9 bilder):
-  ⚠️  2 bilder verkar felaktiga (22.2%)
-      -> 1 st liknar 'Britney Young' (snitt-conf: 0.71)
-      -> 1 st liknar 'Brittany Andrews' (snitt-conf: 0.73)
-
-Jessi Foster (17 bilder):
-  ⚠️  2 bilder verkar felaktiga (11.8%)
-      -> 2 st liknar 'Roxanne Dawn' (snitt-conf: 0.73)
-
-Jenni Jordan (7 bilder):
-  ⚠️  2 bilder verkar felaktiga (28.6%)
-      -> 2 st liknar 'Eve Blue' (snitt-conf: 0.69)
-
-Eva Strong (5 bilder):
-  ⚠️  2 bilder verkar felaktiga (40.0%)
-      -> 2 st liknar 'Eve Blue' (snitt-conf: 0.68)
-
-Evane Nordstern (9 bilder):
-  ⚠️  2 bilder verkar felaktiga (22.2%)
-      -> 2 st liknar 'Eve Blue' (snitt-conf: 0.80)
-
-Evanni Solei (4 bilder):
-  ⚠️  2 bilder verkar felaktiga (50.0%)
-      -> 2 st liknar 'Eve Blue' (snitt-conf: 0.78)
-
-Charli Piper (15 bilder):
-  ⚠️  2 bilder verkar felaktiga (13.3%)
-      -> 2 st liknar 'Hannah Lynn' (snitt-conf: 0.74)
-
-Ally Foxy (45 bilder):
-  ⚠️  2 bilder verkar felaktiga (4.4%)
-      -> 1 st liknar 'Isabella D' (snitt-conf: 0.66)
-      -> 1 st liknar 'April Grantham' (snitt-conf: 0.69)
-
-Brandi Fox (8 bilder):
-  ⚠️  2 bilder verkar felaktiga (25.0%)
-      -> 1 st liknar 'Shelby Gibson' (snitt-conf: 0.75)
-      -> 1 st liknar 'Alli Rae' (snitt-conf: 0.72)
-
-Carmen Kinsley (27 bilder):
-  ⚠️  2 bilder verkar felaktiga (7.4%)
-      -> 1 st liknar 'Chloe Cooper' (snitt-conf: 0.72)
-      -> 1 st liknar 'Sasha Pearl' (snitt-conf: 0.72)
-
-Edessa A Keegan (68 bilder):
-  ⚠️  2 bilder verkar felaktiga (2.9%)
-      -> 2 st liknar 'Angela Haddie' (snitt-conf: 0.75)
-
-Suzy Stanton (10 bilder):
-  ⚠️  2 bilder verkar felaktiga (20.0%)
-      -> 1 st liknar 'Elena Lombard' (snitt-conf: 0.83)
-      -> 1 st liknar 'Madison Wilde' (snitt-conf: 0.78)
-
-Sweet Bunny (3 bilder):
-  ⚠️  2 bilder verkar felaktiga (66.7%)
-      -> 1 st liknar 'Cameron Skye' (snitt-conf: 0.70)
-      -> 1 st liknar 'Kaitlyn Katsaros' (snitt-conf: 0.81)
-
-TJ Powers (23 bilder):
-  ⚠️  2 bilder verkar felaktiga (8.7%)
-      -> 1 st liknar 'Sheena Shaw' (snitt-conf: 0.68)
-      -> 1 st liknar 'Bella Rose' (snitt-conf: 0.72)
-
-Tarise Taylor (25 bilder):
-  ⚠️  2 bilder verkar felaktiga (8.0%)
-      -> 1 st liknar 'Jeannie Santiago' (snitt-conf: 0.85)
-      -> 1 st liknar 'Tracy Lindsay' (snitt-conf: 0.66)
-
-Ruby Enraylls (4 bilder):
-  ⚠️  2 bilder verkar felaktiga (50.0%)
-      -> 1 st liknar 'Ally Arizona' (snitt-conf: 0.78)
-      -> 1 st liknar 'Ashleigh Hannah' (snitt-conf: 0.82)
-
-Saisha McKenzie (4 bilder):
-  ⚠️  2 bilder verkar felaktiga (50.0%)
-      -> 2 st liknar 'Emily Love' (snitt-conf: 0.70)
-
-Saya Niiyama (19 bilder):
-  ⚠️  2 bilder verkar felaktiga (10.5%)
-      -> 2 st liknar 'Alex Tanner' (snitt-conf: 0.75)
-
-Scarlett ORyan (8 bilder):
-  ⚠️  2 bilder verkar felaktiga (25.0%)
-      -> 2 st liknar 'Penny Brooks' (snitt-conf: 0.78)
-
-Zara DuRose (39 bilder):
-  ⚠️  2 bilder verkar felaktiga (5.1%)
-      -> 1 st liknar 'Yuu Sakura' (snitt-conf: 0.66)
-      -> 1 st liknar 'Veronica Leal' (snitt-conf: 0.67)
-
-Zoe Dee (36 bilder):
-  ⚠️  2 bilder verkar felaktiga (5.6%)
-      -> 1 st liknar 'Mell Blanco' (snitt-conf: 0.77)
-      -> 1 st liknar 'Zander Lee' (snitt-conf: 0.83)
-
-Briana Banks (29 bilder):
-  ⚠️  2 bilder verkar felaktiga (6.9%)
-      -> 1 st liknar 'Cream Sofi' (snitt-conf: 0.66)
-      -> 1 st liknar 'Jenny Reid' (snitt-conf: 0.71)
-
-Kendall Rae (38 bilder):
-  ⚠️  2 bilder verkar felaktiga (5.3%)
-      -> 2 st liknar 'Airi Mizusawa' (snitt-conf: 0.73)
-
-Sophia Gently (17 bilder):
-  ⚠️  2 bilder verkar felaktiga (11.8%)
-      -> 2 st liknar 'Mirabella' (snitt-conf: 0.72)
-
-Michelle Wild (20 bilder):
-  ⚠️  2 bilder verkar felaktiga (10.0%)
-      -> 2 st liknar 'Esmeralda Alvarez Leyva' (snitt-conf: 0.72)
-
-Blondie Bombshell (26 bilder):
-  ⚠️  2 bilder verkar felaktiga (7.7%)
-      -> 2 st liknar 'Tyler Michaels' (snitt-conf: 0.80)
-
-Cassandra Cruz (10 bilder):
-  ⚠️  1 bilder verkar felaktiga (10.0%)
-      -> 1 st liknar 'Tina Hot' (snitt-conf: 0.74)
-
-Jordan Green (45 bilder):
-  ⚠️  1 bilder verkar felaktiga (2.2%)
-      -> 1 st liknar 'Riley Steele' (snitt-conf: 0.70)
-
-Madi Meadows (11 bilder):
-  ⚠️  1 bilder verkar felaktiga (9.1%)
-      -> 1 st liknar 'Blanche Bradburry' (snitt-conf: 0.75)
-
-Marica Hase (46 bilder):
-  ⚠️  1 bilder verkar felaktiga (2.2%)
-      -> 1 st liknar 'Sophia Leone' (snitt-conf: 0.72)
-
-Nekane Sweet (16 bilder):
-  ⚠️  1 bilder verkar felaktiga (6.2%)
-      -> 1 st liknar 'Lindsey Olsen' (snitt-conf: 0.67)
-
-Rebeca Linares (35 bilder):
-  ⚠️  1 bilder verkar felaktiga (2.9%)
-      -> 1 st liknar 'Indianna Jaymes' (snitt-conf: 0.66)
-
-Romina Lopez (23 bilder):
-  ⚠️  1 bilder verkar felaktiga (4.3%)
-      -> 1 st liknar 'Kayden Kross' (snitt-conf: 0.65)
-
-Sybil A Kailena (63 bilder):
-  ⚠️  1 bilder verkar felaktiga (1.6%)
-      -> 1 st liknar 'Savannah Gold' (snitt-conf: 0.67)
-
-Zoey Taylor (40 bilder):
-  ⚠️  1 bilder verkar felaktiga (2.5%)
-      -> 1 st liknar 'Lucy Lee' (snitt-conf: 0.76)
-
-Alyssia Vera (28 bilder):
-  ⚠️  1 bilder verkar felaktiga (3.6%)
-      -> 1 st liknar 'Nansy Small' (snitt-conf: 0.78)
-
-Amanda Lane (12 bilder):
-  ⚠️  1 bilder verkar felaktiga (8.3%)
-      -> 1 st liknar 'Jasmine Black' (snitt-conf: 0.76)
-
-Ana Cheri (42 bilder):
-  ⚠️  1 bilder verkar felaktiga (2.4%)
-      -> 1 st liknar 'Lilly Bella' (snitt-conf: 0.70)
-
-Anna Goncharenko (19 bilder):
-  ⚠️  1 bilder verkar felaktiga (5.3%)
-      -> 1 st liknar 'Leo Ahsoka' (snitt-conf: 0.66)
-
-Apricot Pitts (41 bilder):
-  ⚠️  1 bilder verkar felaktiga (2.4%)
-      -> 1 st liknar 'Kama Oxi' (snitt-conf: 0.67)
-
-Aria Kai (26 bilder):
-  ⚠️  1 bilder verkar felaktiga (3.8%)
-      -> 1 st liknar 'Anita Bellini' (snitt-conf: 0.74)
-
-Ariana Cortez (13 bilder):
-  ⚠️  1 bilder verkar felaktiga (7.7%)
-      -> 1 st liknar 'Anna AJ' (snitt-conf: 0.70)
-
-Arina Shy (21 bilder):
-  ⚠️  1 bilder verkar felaktiga (4.8%)
-      -> 1 st liknar 'Aria Sky' (snitt-conf: 0.79)
-
-Ashley Zeitler (12 bilder):
-  ⚠️  1 bilder verkar felaktiga (8.3%)
-      -> 1 st liknar 'Emma Leigh' (snitt-conf: 0.66)
-
-Aston Wilde (24 bilder):
-  ⚠️  1 bilder verkar felaktiga (4.2%)
-      -> 1 st liknar 'Angella Black' (snitt-conf: 0.66)
-
-Beverly Nash (13 bilder):
-  ⚠️  1 bilder verkar felaktiga (7.7%)
-      -> 1 st liknar 'Christina Cavazos' (snitt-conf: 0.72)
-
-Bunny Colby (81 bilder):
-  ⚠️  1 bilder verkar felaktiga (1.2%)
-      -> 1 st liknar 'Crystal Chase' (snitt-conf: 0.76)
-
-Carly Lauren (52 bilder):
-  ⚠️  1 bilder verkar felaktiga (1.9%)
-      -> 1 st liknar 'Alison Star' (snitt-conf: 0.74)
-
-Chloe Toy (11 bilder):
-  ⚠️  1 bilder verkar felaktiga (9.1%)
-      -> 1 st liknar 'Lady Dee' (snitt-conf: 0.68)
-
-Cristi Ann (41 bilder):
-  ⚠️  1 bilder verkar felaktiga (2.4%)
-      -> 1 st liknar 'Yesenia Bustillo' (snitt-conf: 0.77)
-
-Diamond Fontane (12 bilder):
-  ⚠️  1 bilder verkar felaktiga (8.3%)
-      -> 1 st liknar 'Desirae Spencer' (snitt-conf: 0.67)
-
-Dominika Jule (14 bilder):
-  ⚠️  1 bilder verkar felaktiga (7.1%)
-      -> 1 st liknar 'Victoria Lobov' (snitt-conf: 0.75)
-
-Elizaveta (63 bilder):
-  ⚠️  1 bilder verkar felaktiga (1.6%)
-      -> 1 st liknar 'Tatjana Heart' (snitt-conf: 0.68)
-
-Emma Magnolia (6 bilder):
   ⚠️  1 bilder verkar felaktiga (16.7%)
-      -> 1 st liknar 'Sabina Taylor' (snitt-conf: 0.65)
-
-Erin Everheart (43 bilder):
-  ⚠️  1 bilder verkar felaktiga (2.3%)
-      -> 1 st liknar 'Erica Lightspeed' (snitt-conf: 0.69)
-
-Hot Kitty (39 bilder):
-  ⚠️  1 bilder verkar felaktiga (2.6%)
-      -> 1 st liknar 'Holly Peers' (snitt-conf: 0.79)
+      -> 1 st liknar 'Alexandra Tyler' (snitt-conf: 0.82)
 
 Jade Amber (17 bilder):
   ⚠️  1 bilder verkar felaktiga (5.9%)
       -> 1 st liknar 'Holly Belle' (snitt-conf: 0.81)
 
-Jinny Jang (9 bilder):
-  ⚠️  1 bilder verkar felaktiga (11.1%)
-      -> 1 st liknar 'Diamond Foxxx' (snitt-conf: 0.72)
-
-Kara Rose (11 bilder):
-  ⚠️  1 bilder verkar felaktiga (9.1%)
-      -> 1 st liknar 'Richelle Taylor' (snitt-conf: 0.76)
-
-Katia Martin (14 bilder):
-  ⚠️  1 bilder verkar felaktiga (7.1%)
-      -> 1 st liknar 'Anissa Kate' (snitt-conf: 0.71)
-
-Kayla J (5 bilder):
-  ⚠️  1 bilder verkar felaktiga (20.0%)
-      -> 1 st liknar 'Sophia Locke' (snitt-conf: 0.74)
-
-Kelly Oliveira (57 bilder):
-  ⚠️  1 bilder verkar felaktiga (1.8%)
-      -> 1 st liknar 'Anissa Kate' (snitt-conf: 0.70)
-
-Kristen (3 bilder):
-  ⚠️  1 bilder verkar felaktiga (33.3%)
-      -> 1 st liknar 'Charley Chase' (snitt-conf: 0.75)
-
-Kris The Foxx (2 bilder):
-  ⚠️  1 bilder verkar felaktiga (50.0%)
-      -> 1 st liknar 'Charley Chase' (snitt-conf: 0.75)
-
-Lia Mango (7 bilder):
-  ⚠️  1 bilder verkar felaktiga (14.3%)
-      -> 1 st liknar 'Alexa Grace' (snitt-conf: 0.73)
-
-Lucy Vixen (32 bilder):
-  ⚠️  1 bilder verkar felaktiga (3.1%)
-      -> 1 st liknar 'Olivia Lust' (snitt-conf: 0.71)
-
-Mina Von D (2 bilder):
-  ⚠️  1 bilder verkar felaktiga (50.0%)
-      -> 1 st liknar 'Angelic Anya' (snitt-conf: 0.72)
-
-Molly Bennett (86 bilder):
-  ⚠️  1 bilder verkar felaktiga (1.2%)
-      -> 1 st liknar 'Carlotta Champagne' (snitt-conf: 0.72)
-
-Olivia Green (18 bilder):
-  ⚠️  1 bilder verkar felaktiga (5.6%)
-      -> 1 st liknar 'Natalia B' (snitt-conf: 0.74)
-
-Olivia Honey (15 bilder):
-  ⚠️  1 bilder verkar felaktiga (6.7%)
-      -> 1 st liknar 'Natalia B' (snitt-conf: 0.74)
-
 Rose Winters (9 bilder):
   ⚠️  1 bilder verkar felaktiga (11.1%)
       -> 1 st liknar 'Rosah' (snitt-conf: 0.81)
-
-Sata Jones (9 bilder):
-  ⚠️  1 bilder verkar felaktiga (11.1%)
-      -> 1 st liknar 'Irina Voronina' (snitt-conf: 0.70)
-
-Satine Summers (12 bilder):
-  ⚠️  1 bilder verkar felaktiga (8.3%)
-      -> 1 st liknar 'Giny Loud' (snitt-conf: 0.68)
-
-Sea J Raw (14 bilder):
-  ⚠️  1 bilder verkar felaktiga (7.1%)
-      -> 1 st liknar 'Scarlett Hampton' (snitt-conf: 0.65)
-
-Sofie Lilith (4 bilder):
-  ⚠️  1 bilder verkar felaktiga (25.0%)
-      -> 1 st liknar 'Andi James' (snitt-conf: 0.65)
-
-Stacy Bloom (23 bilder):
-  ⚠️  1 bilder verkar felaktiga (4.3%)
-      -> 1 st liknar 'Riley Ann' (snitt-conf: 0.73)
-
-Stella Lane (16 bilder):
-  ⚠️  1 bilder verkar felaktiga (6.2%)
-      -> 1 st liknar 'Carter Cruise' (snitt-conf: 0.75)
-
-Stella Styles (10 bilder):
-  ⚠️  1 bilder verkar felaktiga (10.0%)
-      -> 1 st liknar 'August Ames' (snitt-conf: 0.79)
-
-Summer St Claire (15 bilder):
-  ⚠️  1 bilder verkar felaktiga (6.7%)
-      -> 1 st liknar 'Nika Charming' (snitt-conf: 0.76)
-
-Supravie (6 bilder):
-  ⚠️  1 bilder verkar felaktiga (16.7%)
-      -> 1 st liknar 'Little Puck' (snitt-conf: 0.67)
-
-Sydney Barlette (32 bilder):
-  ⚠️  1 bilder verkar felaktiga (3.1%)
-      -> 1 st liknar 'Alberto Blanco' (snitt-conf: 0.67)
-
-Taylor Tilden (12 bilder):
-  ⚠️  1 bilder verkar felaktiga (8.3%)
-      -> 1 st liknar 'Yukki Amey' (snitt-conf: 0.67)
-
-Victoria Rainbow (69 bilder):
-  ⚠️  1 bilder verkar felaktiga (1.4%)
-      -> 1 st liknar 'Jeana Turner' (snitt-conf: 0.76)
-
-Xo Gisele (20 bilder):
-  ⚠️  1 bilder verkar felaktiga (5.0%)
-      -> 1 st liknar 'Ember Volland' (snitt-conf: 0.72)
-
-Zoey Jpeg (39 bilder):
-  ⚠️  1 bilder verkar felaktiga (2.6%)
-      -> 1 st liknar 'Viky Day' (snitt-conf: 0.68)
-
-Anna Judyta (7 bilder):
-  ⚠️  1 bilder verkar felaktiga (14.3%)
-      -> 1 st liknar 'Yenifer Chp' (snitt-conf: 0.76)
-
-Anna Lisa Wagner (2 bilder):
-  ⚠️  1 bilder verkar felaktiga (50.0%)
-      -> 1 st liknar 'Donna Edmondson' (snitt-conf: 0.68)
-
-Anna Yade (5 bilder):
-  ⚠️  1 bilder verkar felaktiga (20.0%)
-      -> 1 st liknar 'Sabrina Sweet' (snitt-conf: 0.70)
-
-April Esenia (17 bilder):
-  ⚠️  1 bilder verkar felaktiga (5.9%)
-      -> 1 st liknar 'Samantha Snow' (snitt-conf: 0.76)
-
-April Knight (4 bilder):
-  ⚠️  1 bilder verkar felaktiga (25.0%)
-      -> 1 st liknar 'Mason Moore' (snitt-conf: 0.68)
-
-Ariel Ambery (36 bilder):
-  ⚠️  1 bilder verkar felaktiga (2.8%)
-      -> 1 st liknar 'Jade Valentine' (snitt-conf: 0.67)
-
-Ashley Burke (6 bilder):
-  ⚠️  1 bilder verkar felaktiga (16.7%)
-      -> 1 st liknar 'Ageha Kinoshita' (snitt-conf: 0.76)
-
-Ashley Steel (9 bilder):
-  ⚠️  1 bilder verkar felaktiga (11.1%)
-      -> 1 st liknar 'Debbie Boostrom' (snitt-conf: 0.75)
 
 Ashli Ames (6 bilder):
   ⚠️  1 bilder verkar felaktiga (16.7%)
       -> 1 st liknar 'Zaza La Coquine' (snitt-conf: 0.83)
 
-Ashlynn Leigh (8 bilder):
-  ⚠️  1 bilder verkar felaktiga (12.5%)
-      -> 1 st liknar 'Shera Bechard' (snitt-conf: 0.69)
-
-Asian Shan (7 bilder):
-  ⚠️  1 bilder verkar felaktiga (14.3%)
-      -> 1 st liknar 'Ariel Rose' (snitt-conf: 0.70)
-
-Aspen Martin (14 bilder):
-  ⚠️  1 bilder verkar felaktiga (7.1%)
-      -> 1 st liknar 'Tara Ashley' (snitt-conf: 0.76)
-
-Aubrey Leigh (42 bilder):
-  ⚠️  1 bilder verkar felaktiga (2.4%)
-      -> 1 st liknar 'Lilian Stone' (snitt-conf: 0.68)
-
-Ava Fabian (34 bilder):
-  ⚠️  1 bilder verkar felaktiga (2.9%)
-      -> 1 st liknar 'Diamond Banks' (snitt-conf: 0.66)
-
-Avena Lee (44 bilder):
-  ⚠️  1 bilder verkar felaktiga (2.3%)
-      -> 1 st liknar 'Jenna Jordan' (snitt-conf: 0.67)
-
-Judith Able (22 bilder):
-  ⚠️  1 bilder verkar felaktiga (4.5%)
-      -> 1 st liknar 'Felecia' (snitt-conf: 0.68)
-
-Judy Marie (5 bilder):
-  ⚠️  1 bilder verkar felaktiga (20.0%)
-      -> 1 st liknar 'Shayla LaVeaux' (snitt-conf: 0.68)
-
-Angie Scott (3 bilder):
-  ⚠️  1 bilder verkar felaktiga (33.3%)
-      -> 1 st liknar 'Lilit Ariel' (snitt-conf: 0.72)
-
-Angel Princess (9 bilder):
-  ⚠️  1 bilder verkar felaktiga (11.1%)
-      -> 1 st liknar 'Jenny Milstead' (snitt-conf: 0.71)
-
 Angel Sin (9 bilder):
   ⚠️  1 bilder verkar felaktiga (11.1%)
       -> 1 st liknar 'Juliana Grandi' (snitt-conf: 0.88)
-
-Angela Hrizantema (14 bilder):
-  ⚠️  1 bilder verkar felaktiga (7.1%)
-      -> 1 st liknar 'Jessica Workman' (snitt-conf: 0.78)
-
-Clarissa Claire (46 bilder):
-  ⚠️  1 bilder verkar felaktiga (2.2%)
-      -> 1 st liknar 'Anissa Kate' (snitt-conf: 0.73)
-
-Cleo DuBois (4 bilder):
-  ⚠️  1 bilder verkar felaktiga (25.0%)
-      -> 1 st liknar 'Christina Bella' (snitt-conf: 0.67)
-
-Jodie Moore (26 bilder):
-  ⚠️  1 bilder verkar felaktiga (3.8%)
-      -> 1 st liknar 'Inga Zolva' (snitt-conf: 0.80)
-
-Jordan Denae (8 bilder):
-  ⚠️  1 bilder verkar felaktiga (12.5%)
-      -> 1 st liknar 'Tricia Oaks' (snitt-conf: 0.79)
-
-Joanna Meadows (11 bilder):
-  ⚠️  1 bilder verkar felaktiga (9.1%)
-      -> 1 st liknar 'Yasmine Fitzgerald' (snitt-conf: 0.76)
-
-Andreina De Luxe (11 bilder):
-  ⚠️  1 bilder verkar felaktiga (9.1%)
-      -> 1 st liknar 'Allie Jordan' (snitt-conf: 0.75)
-
-Jewel Bancroft (45 bilder):
-  ⚠️  1 bilder verkar felaktiga (2.2%)
-      -> 1 st liknar 'Christen Courtney' (snitt-conf: 0.69)
-
-Jeze Belle (19 bilder):
-  ⚠️  1 bilder verkar felaktiga (5.3%)
-      -> 1 st liknar 'Breann McGregor' (snitt-conf: 0.66)
-
-Andrea Beliz (9 bilder):
-  ⚠️  1 bilder verkar felaktiga (11.1%)
-      -> 1 st liknar 'Sophia Leone' (snitt-conf: 0.77)
-
-Chrissy Harris (41 bilder):
-  ⚠️  1 bilder verkar felaktiga (2.4%)
-      -> 1 st liknar 'Brandi Sparks' (snitt-conf: 0.76)
-
-Jessica Ohare (7 bilder):
-  ⚠️  1 bilder verkar felaktiga (14.3%)
-      -> 1 st liknar 'Anastasia Andis' (snitt-conf: 0.77)
-
-Jessica Parker (6 bilder):
-  ⚠️  1 bilder verkar felaktiga (16.7%)
-      -> 1 st liknar 'Anastasia Andis' (snitt-conf: 0.77)
-
-Jessica Pink (8 bilder):
-  ⚠️  1 bilder verkar felaktiga (12.5%)
-      -> 1 st liknar 'Amara Romani' (snitt-conf: 0.69)
-
-Jessica Sweet (4 bilder):
-  ⚠️  1 bilder verkar felaktiga (25.0%)
-      -> 1 st liknar 'Jessie Parker' (snitt-conf: 0.73)
-
-Jessica Lo (6 bilder):
-  ⚠️  1 bilder verkar felaktiga (16.7%)
-      -> 1 st liknar 'Lacie James' (snitt-conf: 0.68)
-
-Jessica Leigh (11 bilder):
-  ⚠️  1 bilder verkar felaktiga (9.1%)
-      -> 1 st liknar 'Chloe Densmore' (snitt-conf: 0.76)
-
-Amber Lopez (14 bilder):
-  ⚠️  1 bilder verkar felaktiga (7.1%)
-      -> 1 st liknar 'Arya Fae' (snitt-conf: 0.73)
 
 Amie Taylor (8 bilder):
   ⚠️  1 bilder verkar felaktiga (12.5%)
@@ -699,141 +60,37 @@ Brooke Lynn Santos (8 bilder):
   ⚠️  1 bilder verkar felaktiga (12.5%)
       -> 1 st liknar 'Jasmine Symone' (snitt-conf: 0.86)
 
-Brooke Max (3 bilder):
-  ⚠️  1 bilder verkar felaktiga (33.3%)
-      -> 1 st liknar 'Sabrisse Aaliyah' (snitt-conf: 0.68)
-
-Brooke Tyler (7 bilder):
-  ⚠️  1 bilder verkar felaktiga (14.3%)
-      -> 1 st liknar 'Zuzana Zeleznovova' (snitt-conf: 0.77)
-
-Brooklynn Rayne (5 bilder):
-  ⚠️  1 bilder verkar felaktiga (20.0%)
-      -> 1 st liknar 'Amanda Blue' (snitt-conf: 0.68)
-
 Bryleigh Rayne (25 bilder):
   ⚠️  1 bilder verkar felaktiga (4.0%)
       -> 1 st liknar 'Brooke Lynn Santos' (snitt-conf: 0.86)
-
-Busty Megan (12 bilder):
-  ⚠️  1 bilder verkar felaktiga (8.3%)
-      -> 1 st liknar 'Brandy Aniston' (snitt-conf: 0.70)
-
-Busty Tina (6 bilder):
-  ⚠️  1 bilder verkar felaktiga (16.7%)
-      -> 1 st liknar 'Macy B' (snitt-conf: 0.76)
 
 Busty Yenta (5 bilder):
   ⚠️  1 bilder verkar felaktiga (20.0%)
       -> 1 st liknar 'Macy B' (snitt-conf: 0.82)
 
-Cherokee D Ass (5 bilder):
-  ⚠️  1 bilder verkar felaktiga (20.0%)
-      -> 1 st liknar 'Riley Reid' (snitt-conf: 0.78)
-
-Cherrie Dixon (15 bilder):
-  ⚠️  1 bilder verkar felaktiga (6.7%)
-      -> 1 st liknar 'Lea Lexis' (snitt-conf: 0.71)
+Jesse Jordan (10 bilder):
+  ⚠️  1 bilder verkar felaktiga (10.0%)
+      -> 1 st liknar 'Amy McCarthy' (snitt-conf: 0.80)
 
 Jessi Fierce (9 bilder):
   ⚠️  1 bilder verkar felaktiga (11.1%)
       -> 1 st liknar 'Amy McCarthy' (snitt-conf: 0.81)
 
-Jessi Jade Mrochko (53 bilder):
-  ⚠️  1 bilder verkar felaktiga (1.9%)
-      -> 1 st liknar 'Alexsis Faye' (snitt-conf: 0.69)
-
-Jessica Dawn (9 bilder):
-  ⚠️  1 bilder verkar felaktiga (11.1%)
-      -> 1 st liknar 'Andi James' (snitt-conf: 0.65)
-
-Amber Chan (63 bilder):
-  ⚠️  1 bilder verkar felaktiga (1.6%)
-      -> 1 st liknar 'Amy McCarthy' (snitt-conf: 0.75)
-
-Brittany Sylvanowicz (19 bilder):
-  ⚠️  1 bilder verkar felaktiga (5.3%)
-      -> 1 st liknar 'Sylvia Laurent' (snitt-conf: 0.68)
-
 Charlotte Bloom (13 bilder):
   ⚠️  1 bilder verkar felaktiga (7.7%)
       -> 1 st liknar 'River Dawn Ink' (snitt-conf: 0.80)
 
-Jenni Lynn (31 bilder):
-  ⚠️  1 bilder verkar felaktiga (3.2%)
-      -> 1 st liknar 'Stacie Lane' (snitt-conf: 0.74)
-
-Dolores Haze (4 bilder):
-  ⚠️  1 bilder verkar felaktiga (25.0%)
-      -> 1 st liknar 'Matilde Ramos' (snitt-conf: 0.65)
-
-Eva Torres (6 bilder):
-  ⚠️  1 bilder verkar felaktiga (16.7%)
-      -> 1 st liknar 'Eve Blue' (snitt-conf: 0.74)
-
-Eva Vi (5 bilder):
-  ⚠️  1 bilder verkar felaktiga (20.0%)
-      -> 1 st liknar 'Eve Blue' (snitt-conf: 0.77)
-
-Jenia Domai (4 bilder):
-  ⚠️  1 bilder verkar felaktiga (25.0%)
-      -> 1 st liknar 'Sasha Grey' (snitt-conf: 0.71)
-
-Jenna Clove (6 bilder):
-  ⚠️  1 bilder verkar felaktiga (16.7%)
-      -> 1 st liknar 'Silvie Delux' (snitt-conf: 0.72)
-
-Brigitte Desiree (59 bilder):
-  ⚠️  1 bilder verkar felaktiga (1.7%)
-      -> 1 st liknar 'Eva Long' (snitt-conf: 0.67)
-
-Charli Adams (8 bilder):
-  ⚠️  1 bilder verkar felaktiga (12.5%)
-      -> 1 st liknar 'Rachel Travers' (snitt-conf: 0.72)
-
-Charlene Fry (9 bilder):
+Evane Nordstern (9 bilder):
   ⚠️  1 bilder verkar felaktiga (11.1%)
-      -> 1 st liknar 'Eden Ivy' (snitt-conf: 0.76)
-
-Eva Amari (42 bilder):
-  ⚠️  1 bilder verkar felaktiga (2.4%)
-      -> 1 st liknar 'Alexis Fawx' (snitt-conf: 0.68)
-
-Eva Cats (11 bilder):
-  ⚠️  1 bilder verkar felaktiga (9.1%)
-      -> 1 st liknar 'Indica James' (snitt-conf: 0.78)
+      -> 1 st liknar 'Eve Blue' (snitt-conf: 0.81)
 
 Eva Dark (12 bilder):
   ⚠️  1 bilder verkar felaktiga (8.3%)
       -> 1 st liknar 'Indica James' (snitt-conf: 0.82)
 
-Jayne Mansfield (2 bilder):
-  ⚠️  1 bilder verkar felaktiga (50.0%)
-      -> 1 st liknar 'Charity Bangs' (snitt-conf: 0.78)
-
-Ally Johnson (34 bilder):
-  ⚠️  1 bilder verkar felaktiga (2.9%)
-      -> 1 st liknar 'Brooke Haven' (snitt-conf: 0.66)
-
-Allison Grady (6 bilder):
-  ⚠️  1 bilder verkar felaktiga (16.7%)
-      -> 1 st liknar 'Starla Sterling' (snitt-conf: 0.75)
-
-Allison Kilgore (10 bilder):
-  ⚠️  1 bilder verkar felaktiga (10.0%)
-      -> 1 st liknar 'Bobbi Starr' (snitt-conf: 0.67)
-
 Celestia Star (44 bilder):
   ⚠️  1 bilder verkar felaktiga (2.3%)
       -> 1 st liknar 'Reyna Mae' (snitt-conf: 0.84)
-
-Erica Vieira (22 bilder):
-  ⚠️  1 bilder verkar felaktiga (4.5%)
-      -> 1 st liknar 'Darina Vanickova' (snitt-conf: 0.65)
-
-Erika F (38 bilder):
-  ⚠️  1 bilder verkar felaktiga (2.6%)
-      -> 1 st liknar 'Juicy Pearl' (snitt-conf: 0.71)
 
 Erika Mayshawn (11 bilder):
   ⚠️  1 bilder verkar felaktiga (9.1%)
@@ -843,325 +100,49 @@ Housewife Kelly (15 bilder):
   ⚠️  1 bilder verkar felaktiga (6.7%)
       -> 1 st liknar 'Rachel Spence' (snitt-conf: 0.83)
 
-Alisha Lera (7 bilder):
-  ⚠️  1 bilder verkar felaktiga (14.3%)
-      -> 1 st liknar 'Heidi Romanova' (snitt-conf: 0.73)
-
-Honney Bunny (24 bilder):
-  ⚠️  1 bilder verkar felaktiga (4.2%)
-      -> 1 st liknar 'Jaclyn Swedberg' (snitt-conf: 0.73)
-
-Alina Rose (4 bilder):
-  ⚠️  1 bilder verkar felaktiga (25.0%)
-      -> 1 st liknar 'Elizabeth Lawrence' (snitt-conf: 0.68)
-
 Honami Isshiki (2 bilder):
   ⚠️  1 bilder verkar felaktiga (50.0%)
       -> 1 st liknar 'Honey Foxx' (snitt-conf: 0.81)
-
-Alice Webb (9 bilder):
-  ⚠️  1 bilder verkar felaktiga (11.1%)
-      -> 1 st liknar 'Dakota Skye' (snitt-conf: 0.67)
-
-Cassandra Marie Walker (9 bilder):
-  ⚠️  1 bilder verkar felaktiga (11.1%)
-      -> 1 st liknar 'Blake Blossom' (snitt-conf: 0.70)
-
-Cassidy Blue (5 bilder):
-  ⚠️  1 bilder verkar felaktiga (20.0%)
-      -> 1 st liknar 'Ellie Luna' (snitt-conf: 0.70)
-
-Cassidy Cruise (2 bilder):
-  ⚠️  1 bilder verkar felaktiga (50.0%)
-      -> 1 st liknar 'Sky Wonderland' (snitt-conf: 0.69)
-
-Desire Collins (10 bilder):
-  ⚠️  1 bilder verkar felaktiga (10.0%)
-      -> 1 st liknar 'Ashley Sage Ellison' (snitt-conf: 0.66)
 
 Emma Lilly (15 bilder):
   ⚠️  1 bilder verkar felaktiga (6.7%)
       -> 1 st liknar 'Brookliyn Wren' (snitt-conf: 0.81)
 
-Alexis Stevens (31 bilder):
-  ⚠️  1 bilder verkar felaktiga (3.2%)
-      -> 1 st liknar 'Delphina Babe' (snitt-conf: 0.75)
-
-Dee Dee Deluxx (10 bilder):
-  ⚠️  1 bilder verkar felaktiga (10.0%)
-      -> 1 st liknar 'Andi Roxxx' (snitt-conf: 0.68)
-
-Delilah Black (5 bilder):
-  ⚠️  1 bilder verkar felaktiga (20.0%)
-      -> 1 st liknar 'Dolly Darkley' (snitt-conf: 0.67)
-
-Delilah Dash (24 bilder):
-  ⚠️  1 bilder verkar felaktiga (4.2%)
-      -> 1 st liknar 'Sally Dangelo' (snitt-conf: 0.77)
-
-Emily Damiano (7 bilder):
-  ⚠️  1 bilder verkar felaktiga (14.3%)
-      -> 1 st liknar 'Angelica Bright' (snitt-conf: 0.68)
-
-Goldie Crevasse (9 bilder):
-  ⚠️  1 bilder verkar felaktiga (11.1%)
-      -> 1 st liknar 'Ryan Keely' (snitt-conf: 0.67)
-
-Grace Fae (110 bilder):
-  ⚠️  1 bilder verkar felaktiga (0.9%)
-      -> 1 st liknar 'Sapphire Louise' (snitt-conf: 0.75)
-
-Gracie Noel (18 bilder):
-  ⚠️  1 bilder verkar felaktiga (5.6%)
-      -> 1 st liknar 'Kenzie Reeves' (snitt-conf: 0.77)
-
-Hennessie (25 bilder):
-  ⚠️  1 bilder verkar felaktiga (4.0%)
-      -> 1 st liknar 'Dani Mathers' (snitt-conf: 0.77)
-
-Hikari Tsukino (3 bilder):
-  ⚠️  1 bilder verkar felaktiga (33.3%)
-      -> 1 st liknar 'Chikita' (snitt-conf: 0.67)
-
-Jamie Lynn Skye (10 bilder):
-  ⚠️  1 bilder verkar felaktiga (10.0%)
-      -> 1 st liknar 'Rachel Starr' (snitt-conf: 0.75)
-
-Alexia Blue (5 bilder):
-  ⚠️  1 bilder verkar felaktiga (20.0%)
-      -> 1 st liknar 'Kiara Mia' (snitt-conf: 0.73)
-
-Carol Angel (7 bilder):
-  ⚠️  1 bilder verkar felaktiga (14.3%)
-      -> 1 st liknar 'Mona Lee' (snitt-conf: 0.73)
-
 Daytona X (6 bilder):
   ⚠️  1 bilder verkar felaktiga (16.7%)
       -> 1 st liknar 'Taryn Terrell' (snitt-conf: 0.82)
-
-DeJanne Rossi (3 bilder):
-  ⚠️  1 bilder verkar felaktiga (33.3%)
-      -> 1 st liknar 'Jessica Dawn' (snitt-conf: 0.71)
-
-Ellis Attard (9 bilder):
-  ⚠️  1 bilder verkar felaktiga (11.1%)
-      -> 1 st liknar 'Sandra Iron' (snitt-conf: 0.68)
-
-Ginger Kovra (6 bilder):
-  ⚠️  1 bilder verkar felaktiga (16.7%)
-      -> 1 st liknar 'Cherie Deville' (snitt-conf: 0.76)
-
-Gloria Loren (6 bilder):
-  ⚠️  1 bilder verkar felaktiga (16.7%)
-      -> 1 st liknar 'Havana Ginger' (snitt-conf: 0.77)
-
-Gloria Paquette (4 bilder):
-  ⚠️  1 bilder verkar felaktiga (25.0%)
-      -> 1 st liknar 'Havana Ginger' (snitt-conf: 0.78)
 
 Hayley Hanes (3 bilder):
   ⚠️  1 bilder verkar felaktiga (33.3%)
       -> 1 st liknar 'Aina Barnes' (snitt-conf: 0.84)
 
-Heather Kelly (5 bilder):
-  ⚠️  1 bilder verkar felaktiga (20.0%)
-      -> 1 st liknar 'Giselle Leon' (snitt-conf: 0.72)
+Daiquiri Divine (9 bilder):
+  ⚠️  1 bilder verkar felaktiga (11.1%)
+      -> 1 st liknar 'Red Fox' (snitt-conf: 0.82)
 
-Jacqueline Summers (7 bilder):
-  ⚠️  1 bilder verkar felaktiga (14.3%)
-      -> 1 st liknar 'Kira Noir' (snitt-conf: 0.73)
-
-Jacqueline Sweet (5 bilder):
-  ⚠️  1 bilder verkar felaktiga (20.0%)
-      -> 1 st liknar 'Daisy Ducati' (snitt-conf: 0.77)
-
-Candy Rose (25 bilder):
-  ⚠️  1 bilder verkar felaktiga (4.0%)
-      -> 1 st liknar 'Cloee Trinity' (snitt-conf: 0.71)
-
-Candy Teen (7 bilder):
-  ⚠️  1 bilder verkar felaktiga (14.3%)
-      -> 1 st liknar 'Karen Fayina' (snitt-conf: 0.70)
-
-Hannas Honeypot (60 bilder):
-  ⚠️  1 bilder verkar felaktiga (1.7%)
-      -> 1 st liknar 'Giada Sgh' (snitt-conf: 0.74)
-
-Hanny McKain (69 bilder):
-  ⚠️  1 bilder verkar felaktiga (1.4%)
-      -> 1 st liknar 'Gigi Sweets' (snitt-conf: 0.74)
-
-Isabella Bailey (6 bilder):
-  ⚠️  1 bilder verkar felaktiga (16.7%)
-      -> 1 st liknar 'Tamara Grace' (snitt-conf: 0.65)
-
-Isabella Loren (4 bilder):
-  ⚠️  1 bilder verkar felaktiga (25.0%)
-      -> 1 st liknar 'Yume Mitsuki' (snitt-conf: 0.75)
-
-Isis Haze (12 bilder):
-  ⚠️  1 bilder verkar felaktiga (8.3%)
-      -> 1 st liknar 'Camelia Davis' (snitt-conf: 0.68)
-
-Alana Chase (8 bilder):
-  ⚠️  1 bilder verkar felaktiga (12.5%)
-      -> 1 st liknar 'Riley Reid' (snitt-conf: 0.67)
-
-Bella Banxx (54 bilder):
-  ⚠️  1 bilder verkar felaktiga (1.9%)
-      -> 1 st liknar 'Jo Evans' (snitt-conf: 0.79)
-
-Dallas Dixon (6 bilder):
-  ⚠️  1 bilder verkar felaktiga (16.7%)
-      -> 1 st liknar 'Annika Albrite' (snitt-conf: 0.69)
-
-Dana B Chudina (2 bilder):
-  ⚠️  1 bilder verkar felaktiga (50.0%)
-      -> 1 st liknar 'Roxee Couture' (snitt-conf: 0.66)
-
-Fern Assard (7 bilder):
-  ⚠️  1 bilder verkar felaktiga (14.3%)
-      -> 1 st liknar 'Alexxxis Allure' (snitt-conf: 0.67)
-
-Gaby Mueller (4 bilder):
-  ⚠️  1 bilder verkar felaktiga (25.0%)
-      -> 1 st liknar 'Kimberly Phillips' (snitt-conf: 0.66)
-
-Haley Mae (17 bilder):
-  ⚠️  1 bilder verkar felaktiga (5.9%)
-      -> 1 st liknar 'Amber Lynn Bach' (snitt-conf: 0.70)
-
-Hannah Sharp (15 bilder):
-  ⚠️  1 bilder verkar felaktiga (6.7%)
-      -> 1 st liknar 'Jillian Janson' (snitt-conf: 0.74)
-
-Cami Parker (20 bilder):
-  ⚠️  1 bilder verkar felaktiga (5.0%)
-      -> 1 st liknar 'Sofia Lata' (snitt-conf: 0.76)
-
-Dakota Bleu (10 bilder):
+Suzy Stanton (10 bilder):
   ⚠️  1 bilder verkar felaktiga (10.0%)
-      -> 1 st liknar 'Caroline Pierce' (snitt-conf: 0.74)
+      -> 1 st liknar 'Elena Lombard' (snitt-conf: 0.83)
 
-Faye Tality (22 bilder):
-  ⚠️  1 bilder verkar felaktiga (4.5%)
-      -> 1 st liknar 'Red Fox' (snitt-conf: 0.78)
-
-Tiffany Wright (20 bilder):
-  ⚠️  1 bilder verkar felaktiga (5.0%)
-      -> 1 st liknar 'Chanel Rae' (snitt-conf: 0.72)
-
-Tina Higginson (3 bilder):
+Sweet Bunny (3 bilder):
   ⚠️  1 bilder verkar felaktiga (33.3%)
-      -> 1 st liknar 'Candy Lover' (snitt-conf: 0.74)
+      -> 1 st liknar 'Kaitlyn Katsaros' (snitt-conf: 0.81)
 
-Tracy Neve (24 bilder):
-  ⚠️  1 bilder verkar felaktiga (4.2%)
-      -> 1 st liknar 'Mz Twilight' (snitt-conf: 0.73)
+Tara Braxton (20 bilder):
+  ⚠️  1 bilder verkar felaktiga (5.0%)
+      -> 1 st liknar 'Justine Miller' (snitt-conf: 0.81)
 
-Trisha Gordon (41 bilder):
-  ⚠️  1 bilder verkar felaktiga (2.4%)
-      -> 1 st liknar 'Autumn Jade' (snitt-conf: 0.67)
-
-Terri Pazelli (10 bilder):
-  ⚠️  1 bilder verkar felaktiga (10.0%)
-      -> 1 st liknar 'Hibiki Ohtsuki' (snitt-conf: 0.78)
-
-The Burbank Bomber (8 bilder):
-  ⚠️  1 bilder verkar felaktiga (12.5%)
-      -> 1 st liknar 'Holly Garner' (snitt-conf: 0.72)
-
-Sofia Deleon (42 bilder):
-  ⚠️  1 bilder verkar felaktiga (2.4%)
-      -> 1 st liknar 'Annette Christianson' (snitt-conf: 0.69)
-
-Sonechka (4 bilder):
-  ⚠️  1 bilder verkar felaktiga (25.0%)
-      -> 1 st liknar 'Juicy Pearl' (snitt-conf: 0.75)
-
-Sophia Traxler (6 bilder):
-  ⚠️  1 bilder verkar felaktiga (16.7%)
-      -> 1 st liknar 'Clair Santos' (snitt-conf: 0.71)
-
-Stephanie Emma (37 bilder):
-  ⚠️  1 bilder verkar felaktiga (2.7%)
-      -> 1 st liknar 'Christiana Cinn' (snitt-conf: 0.76)
-
-Summer Storm (7 bilder):
-  ⚠️  1 bilder verkar felaktiga (14.3%)
-      -> 1 st liknar 'Alura Jenson' (snitt-conf: 0.69)
-
-Sunshine Ray (8 bilder):
-  ⚠️  1 bilder verkar felaktiga (12.5%)
-      -> 1 st liknar 'Shawnie Jones' (snitt-conf: 0.73)
-
-Sunshine Seiber (7 bilder):
-  ⚠️  1 bilder verkar felaktiga (14.3%)
-      -> 1 st liknar 'Marilyn Sugar' (snitt-conf: 0.70)
-
-Susana Gil (7 bilder):
-  ⚠️  1 bilder verkar felaktiga (14.3%)
-      -> 1 st liknar 'Summer Renee' (snitt-conf: 0.78)
-
-Susanna Angel (73 bilder):
-  ⚠️  1 bilder verkar felaktiga (1.4%)
-      -> 1 st liknar 'Sheridan Love' (snitt-conf: 0.71)
-
-Tai Ellis (4 bilder):
-  ⚠️  1 bilder verkar felaktiga (25.0%)
-      -> 1 st liknar 'Summer Renee' (snitt-conf: 0.77)
-
-Tatiana Garcia (31 bilder):
-  ⚠️  1 bilder verkar felaktiga (3.2%)
-      -> 1 st liknar 'Diana Douglas' (snitt-conf: 0.78)
-
-Tavia Spizer (44 bilder):
-  ⚠️  1 bilder verkar felaktiga (2.3%)
-      -> 1 st liknar 'Timea Bella' (snitt-conf: 0.65)
-
-Taylor Kiss (6 bilder):
-  ⚠️  1 bilder verkar felaktiga (16.7%)
-      -> 1 st liknar 'Tanya Vivas' (snitt-conf: 0.72)
+Tarise Taylor (25 bilder):
+  ⚠️  1 bilder verkar felaktiga (4.0%)
+      -> 1 st liknar 'Jeannie Santiago' (snitt-conf: 0.85)
 
 Sina Hot (33 bilder):
   ⚠️  1 bilder verkar felaktiga (3.0%)
       -> 1 st liknar 'Madison Wilde' (snitt-conf: 0.81)
 
-Sinful Skye (2 bilder):
-  ⚠️  1 bilder verkar felaktiga (50.0%)
-      -> 1 st liknar 'Ciera Lin' (snitt-conf: 0.71)
-
-Shuri Atomi (19 bilder):
-  ⚠️  1 bilder verkar felaktiga (5.3%)
-      -> 1 st liknar 'Samantha 38G' (snitt-conf: 0.70)
-
-Sidney Sebold (5 bilder):
-  ⚠️  1 bilder verkar felaktiga (20.0%)
-      -> 1 st liknar 'Aimi Sakioka' (snitt-conf: 0.79)
-
-Ryo Akanishi (7 bilder):
-  ⚠️  1 bilder verkar felaktiga (14.3%)
-      -> 1 st liknar 'Silvia Saint' (snitt-conf: 0.71)
-
-Sakamoto Hikari (3 bilder):
-  ⚠️  1 bilder verkar felaktiga (33.3%)
-      -> 1 st liknar 'Emily Love' (snitt-conf: 0.66)
-
-Samantha Marie (5 bilder):
-  ⚠️  1 bilder verkar felaktiga (20.0%)
-      -> 1 st liknar 'Lexi Belle' (snitt-conf: 0.79)
-
-Sammie Sparks (22 bilder):
-  ⚠️  1 bilder verkar felaktiga (4.5%)
-      -> 1 st liknar 'Emily Love' (snitt-conf: 0.70)
-
-Samora Morgan (33 bilder):
-  ⚠️  1 bilder verkar felaktiga (3.0%)
-      -> 1 st liknar 'Sybelle Watson' (snitt-conf: 0.68)
-
-Sarah Calanthe (14 bilder):
-  ⚠️  1 bilder verkar felaktiga (7.1%)
-      -> 1 st liknar 'Alisya Gapes' (snitt-conf: 0.75)
+Ruby Enraylls (4 bilder):
+  ⚠️  1 bilder verkar felaktiga (25.0%)
+      -> 1 st liknar 'Ashleigh Hannah' (snitt-conf: 0.82)
 
 Sasha Love (54 bilder):
   ⚠️  1 bilder verkar felaktiga (1.9%)
@@ -1171,85 +152,9 @@ Sasha Sutherland (12 bilder):
   ⚠️  1 bilder verkar felaktiga (8.3%)
       -> 1 st liknar 'Caomei Bala' (snitt-conf: 0.81)
 
-Sasha Von (8 bilder):
-  ⚠️  1 bilder verkar felaktiga (12.5%)
-      -> 1 st liknar 'Summer Rae' (snitt-conf: 0.74)
-
-Shannon James (15 bilder):
-  ⚠️  1 bilder verkar felaktiga (6.7%)
-      -> 1 st liknar 'Harua Narimiya' (snitt-conf: 0.73)
-
-Shannon Kelly (6 bilder):
-  ⚠️  1 bilder verkar felaktiga (16.7%)
-      -> 1 st liknar 'Risa Onodera' (snitt-conf: 0.71)
-
-Shawnie (26 bilder):
-  ⚠️  1 bilder verkar felaktiga (3.8%)
-      -> 1 st liknar 'Rachel Aldana' (snitt-conf: 0.79)
-
-Shiela Cruiz (9 bilder):
-  ⚠️  1 bilder verkar felaktiga (11.1%)
-      -> 1 st liknar 'Iana Little' (snitt-conf: 0.78)
-
-Roxann Celeste (35 bilder):
-  ⚠️  1 bilder verkar felaktiga (2.9%)
-      -> 1 st liknar 'Jessica Marie Love' (snitt-conf: 0.75)
-
-Roxy Love (17 bilder):
-  ⚠️  1 bilder verkar felaktiga (5.9%)
-      -> 1 st liknar 'Zoey Taylor' (snitt-conf: 0.74)
-
-Vika Z Valerie (17 bilder):
-  ⚠️  1 bilder verkar felaktiga (5.9%)
-      -> 1 st liknar 'Richelle Taylor' (snitt-conf: 0.76)
-
-Violet Hill (53 bilder):
-  ⚠️  1 bilder verkar felaktiga (1.9%)
-      -> 1 st liknar 'Casey Calvert' (snitt-conf: 0.78)
-
-Vivi St Claire (9 bilder):
-  ⚠️  1 bilder verkar felaktiga (11.1%)
-      -> 1 st liknar 'Vicky Varga' (snitt-conf: 0.69)
-
-Viviana Hughes (9 bilder):
-  ⚠️  1 bilder verkar felaktiga (11.1%)
-      -> 1 st liknar 'Tawny Tyler' (snitt-conf: 0.73)
-
 Redhead Panter (39 bilder):
   ⚠️  1 bilder verkar felaktiga (2.6%)
       -> 1 st liknar 'Elyse Jean' (snitt-conf: 0.83)
-
-Regina Manfre (15 bilder):
-  ⚠️  1 bilder verkar felaktiga (6.7%)
-      -> 1 st liknar 'Eva Berger' (snitt-conf: 0.65)
-
-Ren Azumi (21 bilder):
-  ⚠️  1 bilder verkar felaktiga (4.8%)
-      -> 1 st liknar 'Tawny Tyler' (snitt-conf: 0.73)
-
-Rhonda Baxter (24 bilder):
-  ⚠️  1 bilder verkar felaktiga (4.2%)
-      -> 1 st liknar 'Vivian Lauren' (snitt-conf: 0.69)
-
-Rika Hirashita (3 bilder):
-  ⚠️  1 bilder verkar felaktiga (33.3%)
-      -> 1 st liknar 'Raven Lynn' (snitt-conf: 0.71)
-
-Rina Himesaki (4 bilder):
-  ⚠️  1 bilder verkar felaktiga (25.0%)
-      -> 1 st liknar 'Adrianna Nicole' (snitt-conf: 0.74)
-
-Rinna A (6 bilder):
-  ⚠️  1 bilder verkar felaktiga (16.7%)
-      -> 1 st liknar 'Esmeralda Lopez' (snitt-conf: 0.75)
-
-Valarie Gibson (36 bilder):
-  ⚠️  1 bilder verkar felaktiga (2.8%)
-      -> 1 st liknar 'Rose Red' (snitt-conf: 0.77)
-
-Valentina Vega (46 bilder):
-  ⚠️  1 bilder verkar felaktiga (2.2%)
-      -> 1 st liknar 'Remy LaCroix' (snitt-conf: 0.67)
 
 Vanessa Black (7 bilder):
   ⚠️  1 bilder verkar felaktiga (14.3%)
@@ -1259,103 +164,27 @@ Vanessa Blake (6 bilder):
   ⚠️  1 bilder verkar felaktiga (16.7%)
       -> 1 st liknar 'Rye Tye' (snitt-conf: 0.87)
 
-Veronica Jasmine (4 bilder):
-  ⚠️  1 bilder verkar felaktiga (25.0%)
-      -> 1 st liknar 'Michelle Wild' (snitt-conf: 0.67)
-
-Veronica Stone (8 bilder):
-  ⚠️  1 bilder verkar felaktiga (12.5%)
-      -> 1 st liknar 'Jessica Leigh' (snitt-conf: 0.73)
-
-Veronica Vella (7 bilder):
-  ⚠️  1 bilder verkar felaktiga (14.3%)
-      -> 1 st liknar 'Mandy Dee' (snitt-conf: 0.67)
-
-Veronica Von (17 bilder):
-  ⚠️  1 bilder verkar felaktiga (5.9%)
-      -> 1 st liknar 'Bonnie Rotten' (snitt-conf: 0.69)
-
 Veronika Eve (34 bilder):
   ⚠️  1 bilder verkar felaktiga (2.9%)
       -> 1 st liknar 'Sylvia Bateman' (snitt-conf: 0.81)
 
-Veronika F Nutela (32 bilder):
-  ⚠️  1 bilder verkar felaktiga (3.1%)
-      -> 1 st liknar 'Eva Torres' (snitt-conf: 0.79)
+Zoe Dee (36 bilder):
+  ⚠️  1 bilder verkar felaktiga (2.8%)
+      -> 1 st liknar 'Zander Lee' (snitt-conf: 0.83)
 
-Victoria Vonn (6 bilder):
-  ⚠️  1 bilder verkar felaktiga (16.7%)
-      -> 1 st liknar 'Yulia Bright' (snitt-conf: 0.74)
+Danny Hernandez (23 bilder):
+  ⚠️  1 bilder verkar felaktiga (4.3%)
+      -> 1 st liknar 'Elinor Gasset' (snitt-conf: 0.81)
 
-Rachel Donati (11 bilder):
-  ⚠️  1 bilder verkar felaktiga (9.1%)
-      -> 1 st liknar 'Remy LaCroix' (snitt-conf: 0.74)
-
-Water Fire (6 bilder):
-  ⚠️  1 bilder verkar felaktiga (16.7%)
-      -> 1 st liknar 'Darcie Dolce' (snitt-conf: 0.70)
-
-Wendy Jayne (2 bilder):
-  ⚠️  1 bilder verkar felaktiga (50.0%)
-      -> 1 st liknar 'Proxy Paige' (snitt-conf: 0.74)
-
-Wenona (5 bilder):
-  ⚠️  1 bilder verkar felaktiga (20.0%)
-      -> 1 st liknar 'Yui Hatano' (snitt-conf: 0.76)
-
-Wild Devil (65 bilder):
-  ⚠️  1 bilder verkar felaktiga (1.5%)
-      -> 1 st liknar 'Ryder Cummings' (snitt-conf: 0.78)
-
-Xenia Blue (39 bilder):
-  ⚠️  1 bilder verkar felaktiga (2.6%)
-      -> 1 st liknar 'Evie Delatosso' (snitt-conf: 0.74)
-
-Yoshimi Yamazaki (18 bilder):
-  ⚠️  1 bilder verkar felaktiga (5.6%)
-      -> 1 st liknar 'Rain Degrey' (snitt-conf: 0.72)
-
-Yuka Kojima (20 bilder):
-  ⚠️  1 bilder verkar felaktiga (5.0%)
-      -> 1 st liknar 'Beretta James' (snitt-conf: 0.79)
-
-Yuki Ito (4 bilder):
-  ⚠️  1 bilder verkar felaktiga (25.0%)
-      -> 1 st liknar 'Dionisia' (snitt-conf: 0.73)
-
-Yume Aoi (2 bilder):
-  ⚠️  1 bilder verkar felaktiga (50.0%)
-      -> 1 st liknar 'Yui Misaki' (snitt-conf: 0.69)
-
-Christina Savoy (3 bilder):
-  ⚠️  1 bilder verkar felaktiga (33.3%)
-      -> 1 st liknar 'Yuki Mizuho' (snitt-conf: 0.75)
-
-Juliet Flowers (12 bilder):
-  ⚠️  1 bilder verkar felaktiga (8.3%)
-      -> 1 st liknar 'Debbie Boostrom' (snitt-conf: 0.75)
-
-Yui Kawagoe (2 bilder):
-  ⚠️  1 bilder verkar felaktiga (50.0%)
-      -> 1 st liknar 'Aneta Buena' (snitt-conf: 0.70)
-
-Bree Barrett (17 bilder):
-  ⚠️  1 bilder verkar felaktiga (5.9%)
-      -> 1 st liknar 'Mihrimah' (snitt-conf: 0.65)
-
-Christina Jolie (31 bilder):
-  ⚠️  1 bilder verkar felaktiga (3.2%)
-      -> 1 st liknar 'Cadence St John' (snitt-conf: 0.71)
-
-Ivy Rain (27 bilder):
-  ⚠️  1 bilder verkar felaktiga (3.7%)
-      -> 1 st liknar 'Whitney Uliana' (snitt-conf: 0.77)
+Julie Robbins (19 bilder):
+  ⚠️  1 bilder verkar felaktiga (5.3%)
+      -> 1 st liknar 'Alice Romain' (snitt-conf: 0.81)
 
 Ariel Temple (35 bilder):
   ⚠️  1 bilder verkar felaktiga (2.9%)
       -> 1 st liknar 'Suzie Carina' (snitt-conf: 0.83)
 
-Kristine Simmons (39 bilder):
-  ⚠️  1 bilder verkar felaktiga (2.6%)
-      -> 1 st liknar 'Ai Mizushima' (snitt-conf: 0.66)
+Blondie Bombshell (26 bilder):
+  ⚠️  1 bilder verkar felaktiga (3.8%)
+      -> 1 st liknar 'Tyler Michaels' (snitt-conf: 0.83)
 
