@@ -56,3 +56,8 @@ run_step "[6/7] Train KNN model" $PYTHON face_arc_pipeline.py --mode train --emb
 run_step "[7/7] Normalize & move alias files" $PYTHON alias_cleanup.py --data-root $DATA_ROOT --merge $MERGE_FILE --processed $PROCESSED_JSON --prune-missing --missing-log "$WORKDIR/missing_after_alias_cleanup.txt"
 
 echo "All steps completed."
+
+# Töm remove.txt och merge?.csv
+echo "Tömmer $REMOVE_FILE och $script_dir/merge?.csv..."
+echo -n > "$REMOVE_FILE"
+echo -n > "$script_dir/merge\?.csv"

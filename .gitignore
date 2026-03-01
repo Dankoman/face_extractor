@@ -1,31 +1,19 @@
-.venv/*
+.venv/
+__pycache__/
 *.pkl
-static
-uploads
+.~lock.*
+
+# Pipeline work directory contents
 arcface_work-ppic/*.jsonl
+arcface_work-ppic/embeddings_ppic.pkl*
+arcface_work-ppic/processed-ppic.*
+arcface_work-ppic/missing_after_alias_cleanup.txt
+arcface_work-ppic/high_false_80_100.ods
+
+# Gender model weights
 models/deploy_gender.prototxt
 models/gender_net.caffemodel
-.~lock.*
-arcface_work-ppic/embeddings_ppic.pkl.bak
-arcface_work-ppic/embeddings_ppic.pkl.bak2
-arcface_work-ppic/embeddings_ppic.pkl.bak4
-arcface_work-ppic/embeddings_ppic.pklbak3
-__pycache__/api_endpoint.cpython-311.pyc
-merge?.csv
-arcface_work-ppic/embeddings_ppic.pkl*
-__pycache__/face_arc_pipeline.cpython-311.pyc
-arcface_work-ppic/high_false_80_100.ods
-arcface_work-ppic/processed-ppic.jsonl.bak2
-arcface_work-ppic/high_false_80_100.ods
-arcface_work-ppic/processed-ppic.jsonl.bak
-arcface_work-ppic/processed-ppic.removal-summary.txt
-arcface_work-ppic/processed-ppic.*
-male_faces.csv
-male_faces.ods
-arcface_work-ppic/missing_after_alias_cleanup.txt
-low_confidence_images.csv
-low_confidence_images.ods
-low_confidence_merged.csv
-low_confidence_merged.csv
+
+# Pipeline I/O (emptied after each run)
 merge?.csv
 remove.txt
