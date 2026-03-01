@@ -51,10 +51,35 @@ MODEL_PATH = "arcface_work-ppic/face_knn_arcface_ppic.pkl"
 app_insight = FaceAnalysis(name="buffalo_l", providers=["CPUExecutionProvider"])  # justera providers om du har GPU
 app_insight.prepare(ctx_id=0)
 
-with open(MODEL_PATH, "rb") as f:
-    bundle = pickle.load(f)
-clf = bundle["model"]
-le = bundle["label_encoder"]
+_model_lock = Lock()
+_model_mtime: float = 0.0
+clf = None
+le = None
+
+
+def _maybe_reload_model():
+    """Ladda om modellen om pkl-filen har ändrats på disk."""
+    global clf, le, _model_mtime
+    try:
+        current_mtime = os.path.getmtime(MODEL_PATH)
+    except OSError:
+        return
+    if current_mtime == _model_mtime:
+        return
+    with _model_lock:
+        # Dubbelkolla efter att vi tagit låset
+        if current_mtime == _model_mtime:
+            return
+        print(f"[model] Loading model from {MODEL_PATH} (mtime {current_mtime})")
+        with open(MODEL_PATH, "rb") as f:
+            bundle = pickle.load(f)
+        clf = bundle["model"]
+        le = bundle["label_encoder"]
+        _model_mtime = current_mtime
+
+
+# Ladda modellen direkt vid uppstart
+_maybe_reload_model()
 
 THRESHOLD = 0.2  # legacy
 
@@ -727,6 +752,7 @@ def stashdb_performer_details():
 @app.post("/recognize")
 def recognize():
     try:
+        _maybe_reload_model()
         top_k = int(request.args.get("top_k", 3))
         file = request.files.get("image") if "image" in request.files else None
         data = file.read() if file is not None else request.get_data()
@@ -890,11 +916,32 @@ def web_ui():
     button:disabled{opacity:.6;cursor:not-allowed}
     input[type=file]{display:none}
     label.btn{display:inline-block;background:#1d2027;border:1px solid #2b2f39;color:#cbd1dd;padding:8px 12px;border-radius:10px;cursor:pointer}
-    #candidates{display:flex;flex-direction:column;gap:10px;margin-top:12px}
-    .cand{display:flex;justify-content:space-between;gap:12px;padding:10px;border:1px solid #23252b;border-radius:10px;background:#101216}
-    .cand b{color:#fff}
-    .row{display:flex;align-items:center;gap:8px}
     .meta{color:#9aa0ac;font-size:12px}
+
+    /* Canvas-wrapper med overlay */
+    #canvas-wrapper{position:relative;display:inline-block;max-width:100%}
+
+    /* Bounding-box overlay */
+    .frp-overlay{position:absolute;inset:0;pointer-events:none;z-index:10;font-family:ui-sans-serif,system-ui}
+    .frp-face-box{position:absolute;border:2px solid rgba(0,200,255,0.9);border-radius:6px;box-shadow:0 0 0 1px rgba(0,0,0,0.35),0 4px 14px rgba(0,0,0,0.4);pointer-events:auto;cursor:pointer;transition:border-color .15s}
+    .frp-face-box:hover{border-color:rgba(0,200,255,1);z-index:100}
+
+    /* Namn-dropdown bredvid boxen */
+    .frp-suggestions{position:absolute;left:0;top:100%;margin-top:6px;min-width:220px;max-width:none;width:max-content;background:rgba(18,18,18,0.92);color:#f2f2f2;border:1px solid rgba(255,255,255,0.12);border-radius:10px;overflow:visible;backdrop-filter:blur(6px);pointer-events:auto;display:none}
+    .frp-suggestions.visible{display:block}
+    .frp-face-box.active{border-color:rgba(0,200,255,1);z-index:100}
+    .frp-suggestion{display:flex;align-items:center;gap:10px;padding:8px 10px;line-height:1.25;border-bottom:1px solid rgba(255,255,255,0.06);width:max-content;overflow:visible;cursor:default}
+    .frp-suggestion:last-child{border-bottom:none}
+    .frp-suggestion span{font-size:14px;font-weight:600;color:#f7f7f7;text-shadow:0 1px 1px rgba(0,0,0,0.4)}
+    .frp-suggestion .conf{font-size:12px;font-weight:400;color:#9aa0ac;margin-left:4px}
+    .frp-suggestion.is-low{opacity:0.6}
+
+    /* Flip dropdown ovanför boxen om den hamnar utanför */
+    .frp-face-box[data-flip=\"top\"] .frp-suggestions{top:auto;bottom:100%;margin-top:0;margin-bottom:6px}
+
+    /* Hover-preview tooltip */
+    .frp-preview{position:fixed;left:0;top:0;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:#0f1115;box-shadow:0 8px 18px rgba(0,0,0,0.35);pointer-events:none;z-index:2147483647;overflow:visible;max-width:150px;max-height:90vh}
+    .frp-preview img{display:block;width:100%;height:auto;object-fit:contain;max-width:150px;max-height:90vh;border-radius:10px}
   </style>
 </head>
 <body>
@@ -903,7 +950,7 @@ def web_ui():
     <span class=\"meta\">(klistra in bild med Ctrl+V, eller dra‑och‑släpp / välj fil)</span>
   </header>
   <main>
-    <section class=\"pane\"> 
+    <section class=\"pane\">
       <h2>Bildinmatning</h2>
       <div class=\"content\">
         <div id=\"drop\">Släpp bild här eller <label class=\"btn\" for=\"file\">välj fil</label><input type=\"file\" id=\"file\" accept=\"image/*\"></div>
@@ -916,8 +963,10 @@ def web_ui():
     <section class=\"pane\">
       <h2>Resultat</h2>
       <div class=\"content\">
-        <canvas id=\"canvas\"></canvas>
-        <div id=\"candidates\"></div>
+        <div id=\"canvas-wrapper\">
+          <canvas id=\"canvas\"></canvas>
+          <div id=\"overlay\" class=\"frp-overlay\"></div>
+        </div>
       </div>
     </section>
   </main>
@@ -927,7 +976,7 @@ def web_ui():
   const runBtn = document.getElementById('run');
   const canvas = document.getElementById('canvas');
   const ctx = canvas.getContext('2d');
-  const candidatesEl = document.getElementById('candidates');
+  const overlay = document.getElementById('overlay');
   let imageBlob = null;
   let img = new Image();
 
@@ -937,6 +986,7 @@ def web_ui():
     img.onload = () => {
       canvas.width = img.width; canvas.height = img.height;
       ctx.drawImage(img, 0, 0);
+      overlay.innerHTML = '';
       runBtn.disabled = false;
       URL.revokeObjectURL(url);
     };
@@ -965,33 +1015,159 @@ def web_ui():
     }
   });
 
+  /* ---- Hover-preview (som i stashpluginet) ---- */
+
+  function makePreviewTooltip(){
+    const tip = document.createElement('div');
+    tip.className = 'frp-preview';
+    const im = document.createElement('img');
+    im.alt = 'preview';
+    tip.appendChild(im);
+    return { tip, img: im };
+  }
+
+  function attachHoverPreview(rowEl, name){
+    let tipRef = null;
+    let enterTimer = null;
+    let ctrl = null;
+
+    function placeTip(el, tip){
+      const r = el.getBoundingClientRect();
+      const tr = tip.getBoundingClientRect();
+      const pad = 12;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      let x = r.right + pad;
+      if (x + tr.width > vw - pad) x = Math.max(pad, r.left - tr.width - pad);
+      let y = r.top + (r.height - tr.height) / 2;
+      y = Math.max(pad, Math.min(vh - tr.height - pad, y));
+      if (x < pad) x = pad;
+      tip.style.left = x + 'px';
+      tip.style.top = y + 'px';
+    }
+
+    function removeTip(){
+      if (tipRef){ tipRef.remove(); tipRef = null; }
+    }
+
+    rowEl.addEventListener('mouseenter', () => {
+      if (enterTimer) clearTimeout(enterTimer);
+      enterTimer = setTimeout(async () => {
+        if (tipRef) return;
+        const ac = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+        ctrl = ac;
+        let url;
+        try {
+          const resp = await fetch('/resolve_image?name=' + encodeURIComponent(name) + '&format=bytes', {
+            signal: ac ? ac.signal : undefined
+          });
+          if (!resp.ok || resp.status === 204) return;
+          const blob = await resp.blob();
+          url = URL.createObjectURL(blob);
+        } catch(err){
+          if (err?.name !== 'AbortError') console.error('Preview-fetch misslyckades:', err);
+          return;
+        }
+        if (ctrl !== ac) return;
+        ctrl = null;
+        if (!url || tipRef) return;
+
+        const { tip, img: tImg } = makePreviewTooltip();
+        tipRef = tip;
+        tImg.onload = () => {
+          if (tipRef !== tip) return;
+          if (!tip.parentNode) document.body.appendChild(tip);
+          placeTip(rowEl, tip);
+        };
+        tImg.onerror = () => { tip.remove(); if (tipRef === tip) tipRef = null; };
+        if (!tip.parentNode) document.body.appendChild(tip);
+        tImg.src = url;
+      }, 150);
+    });
+
+    rowEl.addEventListener('mousemove', () => {
+      if (tipRef) placeTip(rowEl, tipRef);
+    });
+
+    rowEl.addEventListener('mouseleave', () => {
+      if (enterTimer){ clearTimeout(enterTimer); enterTimer = null; }
+      if (ctrl){ try { ctrl.abort(); } catch(_){} ctrl = null; }
+      removeTip();
+    });
+  }
+
+  /* ---- Igenkänning ---- */
+
   async function recognize(){
     runBtn.disabled = true;
-    candidatesEl.innerHTML = '';
+    overlay.innerHTML = '';
     const resp = await fetch('/recognize?top_k=3', { method: 'POST', body: imageBlob });
-    if(!resp.ok){ candidatesEl.textContent = 'Fel: ' + resp.status; runBtn.disabled = false; return; }
+    if(!resp.ok){ overlay.textContent = 'Fel: ' + resp.status; runBtn.disabled = false; return; }
     const data = await resp.json();
 
+    // Rita om bilden (rensa eventuella gamla linjer)
     ctx.drawImage(img, 0, 0);
     ctx.lineWidth = 3;
 
-    data.forEach((d, i)=>{
+    // Beräkna skalfaktor – canvasen kan vara skalad via CSS max-width
+    const displayW = canvas.clientWidth || canvas.width;
+    const displayH = canvas.clientHeight || canvas.height;
+    const sx = displayW / canvas.width;
+    const sy = displayH / canvas.height;
+
+    data.forEach((d, i) => {
       const {x,y,w,h} = d.box;
-      const best = (d.candidates?.[0]?.score)||0;
+      const best = (d.candidates?.[0]?.score) || 0;
+
+      // Rita rektangeln på canvasen
       let color = 'rgb(70,220,120)';
       if (best < 0.3) color = 'rgb(220,60,60)'; else if (best < 0.7) color = 'rgb(230,200,70)';
       ctx.strokeStyle = color; ctx.strokeRect(x,y,w,h);
 
-      const box = document.createElement('div'); box.className = 'cand';
-      const title = document.createElement('div');
-      title.innerHTML = `<div class=\"row\"><b>Face ${i+1}</b><span class=\"meta\">${w}×${h}</span></div>`; box.appendChild(title);
+      // Skapa HTML-overlay boundingbox
+      const box = document.createElement('div');
+      box.className = 'frp-face-box';
+      box.style.left   = (x * sx) + 'px';
+      box.style.top    = (y * sy) + 'px';
+      box.style.width  = (w * sx) + 'px';
+      box.style.height = (h * sy) + 'px';
 
-      (d.candidates||[]).slice(0,3).forEach(c=>{
-        const row = document.createElement('div'); row.className = 'row';
-        row.innerHTML = `<span>${c.name}</span><span class=\"meta\">${Math.round(c.score*100)}%</span>`;
-        box.appendChild(row);
-      });
-      candidatesEl.appendChild(box);
+      // Flippa dropdown uppåt om boxen är nära botten
+      if ((y + h) * sy > displayH * 0.7) box.dataset.flip = 'top';
+
+      // Skapa suggestion-lista
+      const sug = document.createElement('div');
+      sug.className = 'frp-suggestions';
+
+      const cands = (d.candidates || []).slice(0, 3);
+      if (cands.length === 0){
+        const row = document.createElement('div');
+        row.className = 'frp-suggestion';
+        row.innerHTML = '<span style=\"color:#9aa0ac\">(inga kandidater)</span>';
+        sug.appendChild(row);
+      } else {
+        cands.forEach(c => {
+          const row = document.createElement('div');
+          row.className = 'frp-suggestion';
+          if (c.score < 0.3) row.classList.add('is-low');
+          row.innerHTML = '<span>' + c.name + '</span><span class=\"conf\">' + Math.round(c.score*100) + '%</span>';
+          sug.appendChild(row);
+          attachHoverPreview(row, c.name);
+        });
+      }
+
+      box.appendChild(sug);
+
+      // Visa/dölj namnlistan med fördröjning
+      let hideTimer = null;
+      function showSug(){ clearTimeout(hideTimer); sug.classList.add('visible'); box.classList.add('active'); }
+      function schedulHide(){ hideTimer = setTimeout(() => { sug.classList.remove('visible'); box.classList.remove('active'); }, 400); }
+      box.addEventListener('mouseenter', showSug);
+      box.addEventListener('mouseleave', schedulHide);
+      sug.addEventListener('mouseenter', showSug);
+      sug.addEventListener('mouseleave', schedulHide);
+
+      overlay.appendChild(box);
     });
 
     runBtn.disabled = false;

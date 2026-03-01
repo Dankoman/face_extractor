@@ -17,3 +17,4 @@ models/gender_net.caffemodel
 # Pipeline I/O (emptied after each run)
 merge?.csv
 remove.txt
+merge/?.csv
