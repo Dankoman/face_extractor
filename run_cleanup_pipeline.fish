@@ -45,15 +45,17 @@ function run_step_if_exists
     end
 end
 
-run_step "[1/7] Apply merge candidates" $PYTHON apply_merge_candidates.py --merge $MERGE_FILE --candidates "$script_dir/merge?.csv"
-run_step_if_exists "[2/7] Pre-clean processed JSONL" $PROCESSED_JSON \
+run_step "[1/8] Detect removed images" $PYTHON detect_removed.py \
+    --data-root $DATA_ROOT --embeddings $EMBEDDINGS_PKL --processed $PROCESSED_JSON --merge $MERGE_FILE
+run_step "[2/8] Apply merge candidates" $PYTHON apply_merge_candidates.py --merge $MERGE_FILE --candidates "$script_dir/merge?.csv"
+run_step_if_exists "[3/8] Pre-clean processed JSONL" $PROCESSED_JSON \
     $PYTHON remove_processed.py --processed $PROCESSED_JSON --remove $REMOVE_FILE --merge $MERGE_FILE
-run_step_if_exists "[3/7] Pre-clean embeddings" $EMBEDDINGS_PKL \
+run_step_if_exists "[4/8] Pre-clean embeddings" $EMBEDDINGS_PKL \
     $PYTHON remove.py --embeddings $EMBEDDINGS_PKL --remove $REMOVE_FILE --merge $MERGE_FILE
-run_step "[4/7] Encode fresh embeddings" $PYTHON face_arc_pipeline.py --mode encode --data-root $DATA_ROOT --workdir $WORKDIR --allow-upsample --verbose --max-yaw 40
-run_step "[5/7] Merge aliases" $PYTHON merge.py
-run_step "[6/7] Train KNN model" $PYTHON face_arc_pipeline.py --mode train --embeddings $MERGED_EMBEDDINGS --model-out $MODEL_OUT
-run_step "[7/7] Normalize & move alias files" $PYTHON alias_cleanup.py --data-root $DATA_ROOT --merge $MERGE_FILE --processed $PROCESSED_JSON --prune-missing --missing-log "$WORKDIR/missing_after_alias_cleanup.txt"
+run_step "[5/8] Encode fresh embeddings" $PYTHON face_arc_pipeline.py --mode encode --data-root $DATA_ROOT --workdir $WORKDIR --allow-upsample --verbose --max-yaw 40
+run_step "[6/8] Merge aliases" $PYTHON merge.py
+run_step "[7/8] Train KNN model" $PYTHON face_arc_pipeline.py --mode train --embeddings $MERGED_EMBEDDINGS --model-out $MODEL_OUT
+run_step "[8/8] Normalize & move alias files" $PYTHON alias_cleanup.py --data-root $DATA_ROOT --merge $MERGE_FILE --processed $PROCESSED_JSON --prune-missing --missing-log "$WORKDIR/missing_after_alias_cleanup.txt"
 
 echo "All steps completed."
 

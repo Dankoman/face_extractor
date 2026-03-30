@@ -119,9 +119,12 @@ def load_processed(proc_path: Path) -> set:
     return done
 
 
-def append_processed(proc_path: Path, img_path: str, ok: bool) -> None:
+def append_processed(proc_path: Path, img_path: str, ok: bool, reason: str = "ok") -> None:
     with proc_path.open("a", encoding="utf-8") as f:
-        f.write(json.dumps({"path": img_path, "ok": ok}) + "\n")
+        rec = {"path": img_path, "ok": ok}
+        if not ok:
+            rec["reason"] = reason
+        f.write(json.dumps(rec) + "\n")
 
 
 def load_embeddings(emb_path: Path) -> Tuple[List[np.ndarray], List[str]]:
@@ -239,8 +242,8 @@ def compute_embedding(app: FaceAnalysis,
                       max_abs_yaw: Optional[float],
                       min_det_score: Optional[float],
                       min_focus: Optional[float],
-                      verbose: bool = False) -> tuple[Optional[np.ndarray], int, bool]:
-    """Returnerar (embedding, antal detekterade ansikten, fallback användes)."""
+                      verbose: bool = False) -> tuple[Optional[np.ndarray], int, bool, str]:
+    """Returnerar (embedding, antal detekterade ansikten, fallback användes, reason)."""
     def log(msg: str) -> None:
         if verbose:
             print(f"[VERBOSE] {img_path}: {msg}")
@@ -248,7 +251,7 @@ def compute_embedding(app: FaceAnalysis,
     img_rgb = load_image_rgb(img_path)
     if img_rgb is None:
         log("failed to load image")
-        return None, 0, False
+        return None, 0, False, "load_failed"
 
     h, w = img_rgb.shape[:2]
     log(f"image size {w}x{h}")
@@ -260,10 +263,10 @@ def compute_embedding(app: FaceAnalysis,
             emb = get_embedding_direct(rec_model, img_rgb)
             if emb is None:
                 log("fallback produced no embedding")
-                return None, 0, True
+                return None, 0, True, "fallback_failed"
             log("fallback embedding succeeded (small image)")
-            return emb, 0, True
-        return None, 0, False
+            return emb, 0, True, "ok"
+        return None, 0, False, "too_small"
 
     img_for_det = img_rgb
     if allow_upsample:
@@ -274,7 +277,7 @@ def compute_embedding(app: FaceAnalysis,
             img_for_det = upsampled
         except Exception as exc:
             log(f"upsample failed: {exc}")
-            return None, 0, False
+            return None, 0, False, "upsample_failed"
 
     bgr = rgb_to_bgr(img_for_det)
     faces = app.get(bgr)
@@ -286,13 +289,17 @@ def compute_embedding(app: FaceAnalysis,
         emb = get_embedding_direct(rec_model, img_rgb)
         if emb is None:
             log("fallback produced no embedding")
-            return None, 0, True
+            return None, 0, True, "fallback_failed"
         log("fallback embedding succeeded (no detection)")
-        return emb, 0, True
+        return emb, 0, True, "ok"
+
+    if n_faces == 0:
+        log("no faces detected")
+        return None, 0, False, "no_faces"
 
     if n_faces != 1:
         log(f"rejecting because {n_faces} faces were detected")
-        return None, n_faces, False
+        return None, n_faces, False, "multiple_faces"
 
     face = faces[0]
     h_det, w_det = img_for_det.shape[:2]
@@ -300,7 +307,7 @@ def compute_embedding(app: FaceAnalysis,
     log(f"detector score={det_score:.3f}")
     if min_det_score is not None and det_score < min_det_score:
         log(f"rejecting due to det_score {det_score:.3f} < {min_det_score:.3f}")
-        return None, 1, False
+        return None, 1, False, "low_det_score"
 
     if max_abs_yaw is not None:
         pose = getattr(face, "pose", None)
@@ -322,17 +329,17 @@ def compute_embedding(app: FaceAnalysis,
             log("pose information missing; cannot apply yaw filter")
         elif abs(yaw) > max_abs_yaw:
             log(f"rejecting due to |yaw|={abs(yaw):.1f}\u00b0 > {max_abs_yaw}\u00b0")
-            return None, 1, False
+            return None, 1, False, "high_yaw"
     x1, y1, x2, y2 = face.bbox.astype(int)
     x1, y1, x2, y2 = max(x1, 0), max(y1, 0), min(x2, w_det), min(y2, h_det)
     if x2 <= x1 or y2 <= y1:
         log("invalid bounding box after clipping")
-        return None, 1, False
+        return None, 1, False, "invalid_bbox"
 
     face_crop = bgr[y1:y2, x1:x2]
     if face_crop.size == 0:
         log("face crop is empty")
-        return None, 1, False
+        return None, 1, False, "empty_crop"
 
     if min_focus is not None and min_focus > 0:
         gray = cv2.cvtColor(face_crop, cv2.COLOR_BGR2GRAY)
@@ -340,13 +347,13 @@ def compute_embedding(app: FaceAnalysis,
         log(f"focus variance={focus:.1f}")
         if focus < min_focus:
             log(f"rejecting due to focus variance {focus:.1f} < {min_focus}")
-            return None, 1, False
+            return None, 1, False, "low_focus"
 
     try:
         blob = cv2.dnn.blobFromImage(face_crop, 1.0, (227, 227), (78.426, 87.768, 114.895), swapRB=False)
     except Exception as exc:
         log(f"failed to build gender blob: {exc}")
-        return None, 1, False
+        return None, 1, False, "gender_blob_failed"
 
     gender_net.setInput(blob)
     preds = gender_net.forward()[0]
@@ -354,15 +361,15 @@ def compute_embedding(app: FaceAnalysis,
     log(f"gender female probability={female_prob:.3f}")
     if female_prob < FEMALE_THRESH:
         log(f"rejecting due to female probability < {FEMALE_THRESH}")
-        return None, 1, False
+        return None, 1, False, "gender_filter"
 
     emb = face.embedding
     if emb is None or emb.size == 0:
         log("embedding empty despite single face")
-        return None, 1, False
+        return None, 1, False, "empty_embedding"
 
     log("embedding computed successfully")
-    return emb.astype(np.float32), 1, False
+    return emb.astype(np.float32), 1, False, "ok"
 
 # ----------------- Pipeline -----------------
 
@@ -382,8 +389,9 @@ def encode(args) -> None:
     try:
         for path,label in tqdm(todo,unit="img"):
             ok=False
+            reason="unknown"
             try:
-                emb, n, fb = compute_embedding(
+                emb, n, fb, reason = compute_embedding(
                     app, rec_model, path,
                     args.allow_fallback, args.allow_upsample,
                     args.max_yaw,
@@ -394,13 +402,14 @@ def encode(args) -> None:
                 ok = emb is not None
                 if args.verbose:
                     status = "OK" if ok else "FAIL"
-                    print(f"[VERBOSE] {path}: final status {status} (faces={n}, fallback={fb})")
+                    print(f"[VERBOSE] {path}: final status {status} (faces={n}, fallback={fb}, reason={reason})")
                 if ok:
                     X.append(emb)
                     y.append(label)
             except Exception as e:
+                reason="exception"
                 print(f"❌ {path}: {e}",file=sys.stderr)
-            append_processed(proc_path,path,ok)
+            append_processed(proc_path,path,ok,reason)
             if ok and len(X)%args.flush_every==0:
                 save_embeddings(emb_path,X,y)
     except KeyboardInterrupt:
