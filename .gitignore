@@ -21,3 +21,5 @@ merge/?.csv
 merge?.csv
 
 to_be_merged.csv
+merge.txt
+uncertainty_report.csv
