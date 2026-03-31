@@ -62,31 +62,7 @@ MODEL_3D_5POINTS = np.array(
 )
 # ---------------------------------------------
 
-# ------------------ Merge Aliases ------------------
-MERGE_TXT = SCRIPT_DIR / "merge.txt"
-
-def load_aliases(merge_path: Path) -> Dict[str, str]:
-    alias_map: Dict[str, str] = {}
-    if not merge_path.exists():
-        return alias_map
-    for raw in merge_path.read_text(encoding='utf-8').splitlines():
-        raw = raw.strip()
-        if not raw:
-            continue
-        if '|' in raw:
-            names = [segment.strip() for segment in raw.split('|') if segment.strip()]
-        elif ':' in raw:
-            label, members = raw.split(':', 1)
-            names = [label.strip()] + [m.strip() for m in members.split(',') if m.strip()]
-        else:
-            names = [raw]
-        if not names:
-            continue
-        primary = names[0]
-        for alias in names:
-            alias_map[alias] = primary
-    return alias_map
-# ---------------------------------------------
+# load_aliases / append_processed ersatta av processed_db-modulen
 
 # ---------------- Gender-CNN ------------------
 GENDER_PROTO = str(MODELS_DIR / "deploy_gender.prototxt")
@@ -357,13 +333,13 @@ def compute_embedding(app: FaceAnalysis,
 # ----------------- Pipeline -----------------
 
 def encode(args) -> None:
-    alias_map = load_aliases(MERGE_TXT)
     data_root = Path(args.data_root)
     workdir = Path(args.workdir); workdir.mkdir(parents=True, exist_ok=True)
     emb_path = workdir/EMB_PKL
     db_path = workdir/PROC_DB
     X,y = load_embeddings(emb_path)
     conn = processed_db.open_db(db_path)
+    alias_map = processed_db.get_alias_map(conn)
     processed = processed_db.load_processed_set(conn)
     all_imgs = [(path, alias_map.get(label, label)) for path, label in iter_images(data_root)]
     todo=[(p,lbl) for p,lbl in all_imgs if p not in processed]

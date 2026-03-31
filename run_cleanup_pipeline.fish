@@ -17,7 +17,6 @@ init_var PYTHON python3
 init_var DATA_ROOT "/home/marqs/Bilder/pBook"
 init_var WORKDIR "$script_dir/arcface_work-ppic"
 init_var REMOVE_FILE "$script_dir/remove.txt"
-init_var MERGE_FILE "$script_dir/merge.txt"
 init_var PROCESSED_DB "$WORKDIR/processed.db"
 init_var EMBEDDINGS_PKL "$WORKDIR/embeddings_ppic.pkl"
 init_var MERGED_EMBEDDINGS "$WORKDIR/embeddings_ppic_merged.pkl"
@@ -46,16 +45,16 @@ function run_step_if_exists
 end
 
 run_step "[1/8] Detect removed images" $PYTHON detect_removed.py \
-    --data-root $DATA_ROOT --embeddings $EMBEDDINGS_PKL --db $PROCESSED_DB --merge $MERGE_FILE
-run_step "[2/8] Apply merge candidates" $PYTHON apply_merge_candidates.py --merge $MERGE_FILE --candidates "$script_dir/to_be_merged.csv"
+    --data-root $DATA_ROOT --embeddings $EMBEDDINGS_PKL --db $PROCESSED_DB
+run_step "[2/8] Apply merge candidates" $PYTHON apply_merge_candidates.py --db $PROCESSED_DB --candidates "$script_dir/to_be_merged.csv"
 run_step_if_exists "[3/8] Pre-clean processed DB" $PROCESSED_DB \
-    $PYTHON remove_processed.py --db $PROCESSED_DB --remove $REMOVE_FILE --merge $MERGE_FILE
+    $PYTHON remove_processed.py --db $PROCESSED_DB --remove $REMOVE_FILE
 run_step_if_exists "[4/8] Pre-clean embeddings" $EMBEDDINGS_PKL \
-    $PYTHON remove.py --embeddings $EMBEDDINGS_PKL --remove $REMOVE_FILE --merge $MERGE_FILE
+    $PYTHON remove.py --embeddings $EMBEDDINGS_PKL --remove $REMOVE_FILE
 run_step "[5/8] Encode fresh embeddings" $PYTHON face_arc_pipeline.py --mode encode --data-root $DATA_ROOT --workdir $WORKDIR --allow-upsample --verbose --max-yaw 40
 run_step "[6/8] Merge aliases" $PYTHON merge.py
 run_step "[7/8] Train KNN model" $PYTHON face_arc_pipeline.py --mode train --embeddings $MERGED_EMBEDDINGS --model-out $MODEL_OUT
-run_step "[8/8] Normalize & move alias files" $PYTHON alias_cleanup.py --data-root $DATA_ROOT --merge $MERGE_FILE --db $PROCESSED_DB --prune-missing --missing-log "$WORKDIR/missing_after_alias_cleanup.txt"
+run_step "[8/8] Normalize & move alias files" $PYTHON alias_cleanup.py --data-root $DATA_ROOT --db $PROCESSED_DB --prune-missing --missing-log "$WORKDIR/missing_after_alias_cleanup.txt"
 
 echo "All steps completed."
 

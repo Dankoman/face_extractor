@@ -15,6 +15,12 @@ CREATE TABLE IF NOT EXISTS processed (
     reason  TEXT DEFAULT 'ok'
 );
 CREATE INDEX IF NOT EXISTS idx_processed_ok ON processed(ok);
+
+CREATE TABLE IF NOT EXISTS aliases (
+    alias        TEXT PRIMARY KEY,
+    primary_name TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_aliases_primary ON aliases(primary_name);
 """
 
 
@@ -33,6 +39,20 @@ def load_processed_set(conn: sqlite3.Connection) -> Set[str]:
     """Returnera set med alla paths (motsvarar gamla load_processed)."""
     cur = conn.execute("SELECT path FROM processed")
     return {row[0] for row in cur}
+
+
+def get_alias_map(conn: sqlite3.Connection) -> Dict[str, str]:
+    """Hämta alla alias och primärnamn som en {alias -> primär} dict."""
+    cur = conn.execute("SELECT alias, primary_name FROM aliases")
+    return {row[0]: row[1] for row in cur}
+
+
+def resolve_name(conn: sqlite3.Connection, name: str) -> str:
+    """Slå upp ett namn och returnera dess primärnamn (eller namnet självt)."""
+    cur = conn.execute("SELECT primary_name FROM aliases WHERE alias = ?", (name,))
+    row = cur.fetchone()
+    return row[0] if row else name
+
 
 
 def is_processed(conn: sqlite3.Connection, path: str) -> bool:
@@ -63,6 +83,23 @@ def add_processed(conn: sqlite3.Connection, path: str, ok: bool, reason: str = "
         (path, int(ok), reason),
     )
     conn.commit()
+
+
+def add_aliases_batch(conn: sqlite3.Connection, mapping: Dict[str, str]) -> None:
+    """Spara en batch med alias-mappningar {alias: primary}. Skriver över befintliga."""
+    data = [(alias, primary) for alias, primary in mapping.items()]
+    conn.executemany(
+        "INSERT OR REPLACE INTO aliases (alias, primary_name) VALUES (?, ?)",
+        data,
+    )
+    conn.commit()
+
+
+def clear_aliases(conn: sqlite3.Connection) -> None:
+    """Töm hela alias-tabellen."""
+    conn.execute("DELETE FROM aliases")
+    conn.commit()
+
 
 
 def add_processed_batch(conn: sqlite3.Connection, records: Iterable[Tuple[str, bool, str]]) -> int:

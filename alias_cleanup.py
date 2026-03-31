@@ -40,7 +40,6 @@ def parse_args() -> argparse.Namespace:
         description="Normalize alias/main folders, move alias files, and update processed DB."
     )
     parser.add_argument("--data-root", required=True, type=Path, help="Root directory that contains performer folders.")
-    parser.add_argument("--merge", required=True, type=Path, help="merge.txt file with alias mapping.")
     parser.add_argument(
         "--db",
         required=True,
@@ -61,22 +60,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def load_alias_map(merge_path: Path) -> Dict[str, str]:
-    alias_map: Dict[str, str] = {}
-    if not merge_path.exists():
-        return alias_map
-    with merge_path.open() as fh:
-        for raw in fh:
-            line = raw.strip()
-            if not line or line.startswith("#"):
-                continue
-            names = [part.strip() for part in line.split("|") if part.strip()]
-            if len(names) < 2:
-                continue
-            primary = names[0]
-            for alias in names[1:]:
-                alias_map[alias] = primary
-    return alias_map
+# load_alias_map ersatt av processed_db.get_alias_map()
 
 
 def normalize_directory(dir_path: Path, prefix: str, rename_map: Dict[str, str], stats: Stats) -> None:
@@ -203,9 +187,9 @@ def main() -> None:
     args = parse_args()
     data_root = args.data_root
     db_path = args.db
-    merge_file = args.merge
 
-    alias_map = load_alias_map(merge_file)
+    conn = processed_db.open_db(db_path)
+    alias_map = processed_db.get_alias_map(conn)
     existing_aliases = sorted([alias for alias in alias_map if (data_root / alias).is_dir()], key=str.casefold)
     stats = Stats(alias_dirs_found=len(existing_aliases))
 

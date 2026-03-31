@@ -11,22 +11,7 @@ from typing import Dict, List, Set, Tuple
 import processed_db
 
 
-def load_alias_map(merge_path: Path) -> Dict[str, str]:
-    """Läs merge.txt och returnera {alias -> primary}."""
-    alias_to_primary: Dict[str, str] = {}
-    if not merge_path.exists():
-        return alias_to_primary
-    for raw in merge_path.read_text(encoding="utf-8").splitlines():
-        raw = raw.strip()
-        if not raw:
-            continue
-        names = [part.strip() for part in raw.split("|") if part.strip()]
-        if not names:
-            continue
-        primary = names[0]
-        for name in names:
-            alias_to_primary[name] = primary
-    return alias_to_primary
+# load_alias_map ersatt av processed_db.get_alias_map()
 
 
 def resolve_affected_persons(
@@ -104,16 +89,10 @@ def main() -> None:
         default="arcface_work-ppic/processed.db",
         help="SQLite-databas med processade bilder",
     )
-    parser.add_argument(
-        "--merge",
-        default="merge.txt",
-        help="Alias-fil (pipe-separerad)",
-    )
     args = parser.parse_args()
 
     db_path = Path(args.db)
     embeddings_path = Path(args.embeddings)
-    merge_path = Path(args.merge)
     data_root = Path(args.data_root)
 
     conn = processed_db.open_db(db_path)
@@ -131,7 +110,7 @@ def main() -> None:
         print(f"  {person}: {len(paths)} borttagna")
 
     # 2. Lös alias och bestäm vilka labels som berörs
-    alias_to_primary = load_alias_map(merge_path)
+    alias_to_primary = processed_db.get_alias_map(conn)
     affected_labels = resolve_affected_persons(person_missing, alias_to_primary, data_root)
 
     print(f"\n🏷️  Berörda labels (inkl. alias): {sorted(affected_labels)}")

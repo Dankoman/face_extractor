@@ -1,24 +1,13 @@
 #!/usr/bin/env python3
 import pickle
 from pathlib import Path
+import processed_db
 
 # Filvägar
-MERGE_FILE = "merge.txt"
 EMBEDDINGS_FILE = "arcface_work-ppic/embeddings_ppic.pkl"
 OUTPUT_FILE = "arcface_work-ppic/embeddings_ppic_merged.pkl"
 
-def load_alias_map(merge_file: str) -> dict:
-    """Läser merge.txt och skapar en alias-mappning."""
-    alias_map = {}
-    with open(merge_file, "r", encoding="utf-8") as f:
-        for line in f:
-            if "|" in line:
-                names = line.strip().split("|")
-                primary_name = names[0]  # Namnet längst till vänster
-                for alias in names[1:]:
-                    if alias:  # Ignorera tomma alias
-                        alias_map[alias] = primary_name
-    return alias_map
+# load_alias_map ersatt av processed_db.get_alias_map()
 
 def merge_embeddings(embeddings_file: str, alias_map: dict, output_file: str):
     """Slår ihop embeddings baserat på alias-mappningen."""
@@ -53,9 +42,12 @@ def merge_embeddings(embeddings_file: str, alias_map: dict, output_file: str):
     print(f"✅ Slutfört! Sparade sammanslagna embeddings till {output_file}")
 
 if __name__ == "__main__":
-    # Ladda alias-mappning från merge.txt
-    alias_map = load_alias_map(MERGE_FILE)
-    print(f"Alias-mappning: {alias_map}")
+    db_path = "arcface_work-ppic/processed.db"
+    conn = processed_db.open_db(db_path)
+    alias_map = processed_db.get_alias_map(conn)
+    conn.close()
+    
+    print(f"Alias-mappning laddad från DB ({len(alias_map)} namn)")
 
     # Slå ihop embeddings
     merge_embeddings(EMBEDDINGS_FILE, alias_map, OUTPUT_FILE)

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Apply to_be_merged.csv suggestions to merge.txt without creating duplicates."""
-from __future__ import annotations
-
 import argparse
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Set, Tuple
+from collections import defaultdict
+import processed_db
+
 
 
 def parse_pipe_line(raw: str) -> List[str]:
@@ -19,45 +19,26 @@ def is_score(token: str) -> bool:
         return False
 
 
-def load_merge(merge_path: Path) -> Tuple[Dict[str, List[str]], List[str], Dict[str, str]]:
-    entries: Dict[str, List[str]] = {}
-    order: List[str] = []
-    name_to_primary: Dict[str, str] = {}
-    if not merge_path.exists():
-        return entries, order, name_to_primary
-    for raw in merge_path.read_text(encoding="utf-8").splitlines():
-        names = parse_pipe_line(raw)
-        if not names:
-            continue
-        primary, *aliases = names
-        entries[primary] = aliases
-        order.append(primary)
-        for name in names:
-            name_to_primary[name] = primary
-    return entries, order, name_to_primary
-
-
-def remove_primary(
-    primary: str,
-    entries: Dict[str, List[str]],
-    order: List[str],
-    name_to_primary: Dict[str, str],
-) -> None:
-    names = [primary] + entries.get(primary, [])
-    entries.pop(primary, None)
-    if primary in order:
-        order.remove(primary)
-    for name in names:
-        name_to_primary.pop(name, None)
+# load_merge och remove_primary ersatta av processed_db-metoder
 
 
 def apply_candidates(
-    merge_path: Path,
+    db_path: Path,
     csv_path: Path,
-) -> Tuple[bool, int]:
-    entries, order, name_to_primary = load_merge(merge_path)
+) -> bool:
+    conn = processed_db.open_db(db_path)
+    # alias_map: {name: primary}
+    alias_map = processed_db.get_alias_map(conn)
+    
+    # Re-construct primary_to_aliases: {primary: [alias1, alias2...]}
+    primary_to_aliases = defaultdict(list)
+    for name, primary in alias_map.items():
+        if name != primary:
+            primary_to_aliases[primary].append(name)
+            
     if not csv_path.exists():
-        return False, len(order)
+        conn.close()
+        return False
 
     changed = False
     lines = [
@@ -86,14 +67,10 @@ def apply_candidates(
                 continue
             collected_set.add(name)
             collected_order.append(name)
-            old_primary = name_to_primary.get(name)
+            old_primary = alias_map.get(name)
             if old_primary and old_primary not in primaries_seen:
                 primaries_seen.append(old_primary)
-                if old_primary in order:
-                    idx = order.index(old_primary)
-                    if idx < insert_index:
-                        insert_index = idx
-                full_names = [old_primary] + entries.get(old_primary, [])
+                full_names = [old_primary] + primary_to_aliases.get(old_primary, [])
                 for alias in full_names:
                     if alias not in collected_set:
                         queue.append(alias)
@@ -101,53 +78,50 @@ def apply_candidates(
         if not collected_set:
             continue
 
-        # Ensure the desired primary stays left-most.
-        ordered_unique: List[str] = []
-        for name in names + collected_order:
-            if name in collected_set and name not in ordered_unique:
-                ordered_unique.append(name)
-        if not ordered_unique:
+        # Determine new primary and group
+        new_primary = primary_candidate
+        all_members = set(collected_set)
+        all_members.add(new_primary)
+        
+        # Check for changes
+        is_changed = False
+        for member in all_members:
+            if alias_map.get(member) != new_primary:
+                is_changed = True
+                break
+        
+        if not is_changed:
             continue
 
-        primary = primary_candidate
-        if primary not in ordered_unique:
-            ordered_unique.insert(0, primary)
-
-        aliases = [name for name in ordered_unique if name != primary]
-
-        # Skip if nothing would change.
-        current_primary = name_to_primary.get(primary)
-        if (
-            current_primary == primary
-            and set(entries.get(primary, [])) == set(aliases)
-            and not primaries_seen
-        ):
-            continue
-
-        for old_primary in primaries_seen:
-            remove_primary(old_primary, entries, order, name_to_primary)
-
-        if primary in entries and primary not in primaries_seen:
-            remove_primary(primary, entries, order, name_to_primary)
-            insert_index = min(insert_index, len(order))
-
-        insert_index = min(insert_index, len(order))
-        order.insert(insert_index, primary)
-        entries[primary] = aliases
-        for name in [primary] + aliases:
-            name_to_primary[name] = primary
+        # Apply update to local structures
+        for member in all_members:
+            # If this member was a primary of something else, merge those too
+            if member in primary_to_aliases:
+                for sub_alias in primary_to_aliases[member]:
+                    alias_map[sub_alias] = new_primary
+                    if sub_alias not in all_members:
+                        # This shouldn't normally happen with the while-loop above, but just in case
+                        pass 
+            alias_map[member] = new_primary
+            
+        # Refresh primary_to_aliases for next candidate row
+        primary_to_aliases.clear()
+        for name, primary in alias_map.items():
+            if name != primary:
+                primary_to_aliases[primary].append(name)
+                
         changed = True
 
     if changed:
-        lines_out = ["|".join([primary] + entries[primary]) for primary in order]
-        merge_path.write_text("\n".join(lines_out) + ("\n" if lines_out else ""), encoding="utf-8")
+        processed_db.add_aliases_batch(conn, alias_map)
 
-    return changed, len(order)
+    conn.close()
+    return changed
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Apply to_be_merged.csv suggestions to merge.txt")
-    ap.add_argument("--merge", type=Path, default=Path("merge.txt"), help="Path to merge.txt")
+    ap = argparse.ArgumentParser(description="Apply to_be_merged.csv suggestions to SQLite DB")
+    ap.add_argument("--db", type=Path, default=Path("arcface_work-ppic/processed.db"), help="Path to processed.db")
     ap.add_argument(
         "--candidates",
         type=Path,
@@ -156,14 +130,15 @@ def main() -> None:
     )
     args = ap.parse_args()
 
-    changed, total = apply_candidates(args.merge, args.candidates)
     if not args.candidates.exists():
         print(f"No candidate file found at {args.candidates}; nothing to do.")
         return
+
+    changed = apply_candidates(args.db, args.candidates)
     if changed:
-        print(f"Updated {args.merge} using {args.candidates}. Total entries: {total}.")
+        print(f"Updated aliases in {args.db} using {args.candidates}.")
     else:
-        print(f"No changes applied. {args.merge} already up to date (entries: {total}).")
+        print(f"No changes applied. {args.db} already up to date.")
 
 
 if __name__ == "__main__":

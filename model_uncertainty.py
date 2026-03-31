@@ -17,22 +17,7 @@ from sklearn.metrics.pairwise import cosine_distances
 import processed_db
 
 
-def load_alias_map(merge_path: Path) -> Dict[str, str]:
-    """Läs merge.txt och returnera {alias -> primary}."""
-    alias_to_primary: Dict[str, str] = {}
-    if not merge_path.exists():
-        return alias_to_primary
-    for raw in merge_path.read_text(encoding="utf-8").splitlines():
-        raw = raw.strip()
-        if not raw:
-            continue
-        names = [part.strip() for part in raw.split("|") if part.strip()]
-        if not names:
-            continue
-        primary = names[0]
-        for name in names:
-            alias_to_primary[name] = primary
-    return alias_to_primary
+# load_alias_map ersatt av processed_db.get_alias_map()
 
 
 def load_embeddings(emb_path: Path) -> Tuple[List[np.ndarray], List[str]]:
@@ -300,16 +285,16 @@ def main() -> None:
                         help="Pickle-fil med embeddings")
     parser.add_argument("--db", default="arcface_work-ppic/processed.db",
                         help="SQLite-databas med processade bilder")
-    parser.add_argument("--merge", default="merge.txt",
-                        help="Alias-fil (pipe-separerad)")
     parser.add_argument("--output", default="uncertainty_report.csv",
                         help="Output CSV-fil")
     parser.add_argument("--top", type=int, default=50,
                         help="Antal mest osäkra att visa")
     args = parser.parse_args()
 
+    print("Laddar databas...")
+    conn = processed_db.open_db(Path(args.db))
     print("Laddar alias-mappning...")
-    alias_map = load_alias_map(Path(args.merge))
+    alias_map = processed_db.get_alias_map(conn)
     print(f"  {len(alias_map)} alias-mappningar")
 
     print("Laddar embeddings...")
@@ -319,7 +304,6 @@ def main() -> None:
     print(f"  {len(X)} embeddings, {len(set(y))} unika personer (efter alias-upplösning)")
 
     print("Laddar processed-statistik...")
-    conn = processed_db.open_db(Path(args.db))
     proc_stats = processed_db.get_stats_by_person(conn)
     conn.close()
     # Upplös alias i processed-stats också
