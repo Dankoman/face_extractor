@@ -22,3 +22,6 @@ merge?.csv
 
 to_be_merged.csv
 uncertainty_report.csv
+arcface_work-ppic/processed.db-shm
+.gitignore
+.gitignore
