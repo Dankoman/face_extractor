@@ -47,7 +47,7 @@ end
 
 run_step "[1/8] Detect removed images" $PYTHON detect_removed.py \
     --data-root $DATA_ROOT --embeddings $EMBEDDINGS_PKL --processed $PROCESSED_JSON --merge $MERGE_FILE
-run_step "[2/8] Apply merge candidates" $PYTHON apply_merge_candidates.py --merge $MERGE_FILE --candidates "$script_dir/merge?.csv"
+run_step "[2/8] Apply merge candidates" $PYTHON apply_merge_candidates.py --merge $MERGE_FILE --candidates "$script_dir/merge/to_be_merged.csv"
 run_step_if_exists "[3/8] Pre-clean processed JSONL" $PROCESSED_JSON \
     $PYTHON remove_processed.py --processed $PROCESSED_JSON --remove $REMOVE_FILE --merge $MERGE_FILE
 run_step_if_exists "[4/8] Pre-clean embeddings" $EMBEDDINGS_PKL \
@@ -59,7 +59,7 @@ run_step "[8/8] Normalize & move alias files" $PYTHON alias_cleanup.py --data-ro
 
 echo "All steps completed."
 
-# Töm remove.txt och merge?.csv
-echo "Tömmer $REMOVE_FILE och $script_dir/merge?.csv..."
+# Töm remove.txt och to_be_merged.csv
+echo "Tömmer $REMOVE_FILE och $script_dir/merge/to_be_merged.csv..."
 echo -n > "$REMOVE_FILE"
-echo -n > "$script_dir/merge\?.csv"
+echo -n > "$script_dir/merge/to_be_merged.csv"

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import difflib
 import json
 import pickle
 import sys
@@ -13,6 +14,24 @@ from typing import Dict, List, Optional, Set, Tuple
 
 import numpy as np
 from sklearn.metrics.pairwise import cosine_distances
+
+
+def load_alias_map(merge_path: Path) -> Dict[str, str]:
+    """Läs merge.txt och returnera {alias -> primary}."""
+    alias_to_primary: Dict[str, str] = {}
+    if not merge_path.exists():
+        return alias_to_primary
+    for raw in merge_path.read_text(encoding="utf-8").splitlines():
+        raw = raw.strip()
+        if not raw:
+            continue
+        names = [part.strip() for part in raw.split("|") if part.strip()]
+        if not names:
+            continue
+        primary = names[0]
+        for name in names:
+            alias_to_primary[name] = primary
+    return alias_to_primary
 
 
 def load_embeddings(emb_path: Path) -> Tuple[List[np.ndarray], List[str]]:
@@ -206,24 +225,139 @@ def determine_primary_issue(m: Dict, is_mutual: bool, partner: Optional[str]) ->
     return "; ".join(issues)
 
 
+def name_similarity(a: str, b: str) -> float:
+    """Räkna ut namnsimilaritet (0-1) med SequenceMatcher."""
+    return difflib.SequenceMatcher(None, a.lower(), b.lower()).ratio()
+
+
+def generate_recommendation(row: Dict, m_a: Dict, m_b: Optional[Dict]) -> str:
+    """Generera en konkret rekommendation i klartext."""
+    person_a = row["person_a"]
+    person_b = row.get("person_b", "")
+    recs = []
+
+    if person_b:
+        # --- Förväxlingspar ---
+        sim = name_similarity(person_a, person_b)
+
+        if sim > 0.75:
+            # Mycket lika namn
+            recs.append(
+                f"Namnen är nästan identiska – troligen samma person. "
+                f"→ MERGE: Slå ihop '{person_a}' och '{person_b}' i merge.txt."
+            )
+        elif row["confusion_dist"] < 0.15:
+            # Extremt nära embeddings
+            recs.append(
+                f"Extremt lika embeddings (avstånd {row['confusion_dist']:.3f}). "
+                f"Kan vara samma person under olika namn, eller blandade bilder i bådas mappar. "
+                f"→ Kontrollera bilderna i båda mapparna. Om samma person: merge. Om olika: rensa felplacerade bilder."
+            )
+        elif m_a["intra_variance"] > 0.25 or (m_b and m_b["intra_variance"] > 0.25):
+            # Hög varians i minst en mapp
+            high_var_persons = []
+            if m_a["intra_variance"] > 0.25:
+                high_var_persons.append(person_a)
+            if m_b and m_b["intra_variance"] > 0.25:
+                high_var_persons.append(person_b)
+            recs.append(
+                f"Hög varians i {' och '.join(high_var_persons)} tyder på blandade identiteter. "
+                f"→ Granska bilderna i {'dessa mappar' if len(high_var_persons) > 1 else 'mappen'} "
+                f"och flytta felplacerade bilder till rätt person."
+            )
+        else:
+            recs.append(
+                f"Personerna har liknande ansiktsdrag (avstånd {row['confusion_dist']:.3f}). "
+                f"→ Kontrollera att bilderna ligger i rätt mappar. Överväg att lägga till fler distinkta bilder."
+            )
+
+        # Tillägg för fail-rate
+        for label, m in [(person_a, m_a), (person_b, m_b)]:
+            if m and m["fail_rate"] > 0.5:
+                recs.append(
+                    f"{label} har {m['fail_rate']:.0%} misslyckade bilder "
+                    f"– byt ut lågkvalitetsbilder mot bättre."
+                )
+
+        # Tillägg för få samples
+        for label, m in [(person_a, m_a), (person_b, m_b)]:
+            if m and m["samples"] <= 3:
+                recs.append(f"{label} har bara {m['samples']} bilder – samla fler träningsbilder.")
+
+    else:
+        # --- Enskild person ---
+        if m_a["samples"] <= 3:
+            recs.append(
+                f"Bara {m_a['samples']} träningsbild(er). "
+                f"→ Samla fler bilder för att förbättra igenkänningen."
+            )
+
+        if m_a["intra_variance"] > 0.3:
+            recs.append(
+                f"Hög varians tyder på att mappen innehåller bilder av flera personer. "
+                f"→ Granska och rensa mappen."
+            )
+
+        if m_a["fail_rate"] > 0.5:
+            recs.append(
+                f"{m_a['fail_rate']:.0%} av bilderna misslyckades. "
+                f"→ Byt ut dåliga bilder mot tydligare ansiktsfoton."
+            )
+
+        if m_a["nearest_distance"] < 0.3:
+            recs.append(
+                f"Ligger nära {m_a['nearest_person']} (avstånd {m_a['nearest_distance']:.3f}). "
+                f"→ Kontrollera att det inte är samma person."
+            )
+
+        if m_a["outliers"] > 2:
+            recs.append(
+                f"{m_a['outliers']} outlier-embeddings. "
+                f"→ Några bilder sticker ut kraftigt – granska och ta bort felaktiga."
+            )
+
+        if not recs:
+            recs.append("Låg men mätbar osäkerhet – ingen akut åtgärd krävs.")
+
+    return " | ".join(recs)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Analysera modellens osäkerhet")
     parser.add_argument("--embeddings", default="arcface_work-ppic/embeddings_ppic.pkl",
                         help="Pickle-fil med embeddings")
     parser.add_argument("--processed", default="arcface_work-ppic/processed-ppic.jsonl",
                         help="JSONL-fil med processade bilder")
+    parser.add_argument("--merge", default="merge.txt",
+                        help="Alias-fil (pipe-separerad)")
     parser.add_argument("--output", default="uncertainty_report.csv",
                         help="Output CSV-fil")
     parser.add_argument("--top", type=int, default=50,
                         help="Antal mest osäkra att visa")
     args = parser.parse_args()
 
+    print("Laddar alias-mappning...")
+    alias_map = load_alias_map(Path(args.merge))
+    print(f"  {len(alias_map)} alias-mappningar")
+
     print("Laddar embeddings...")
     X, y = load_embeddings(Path(args.embeddings))
-    print(f"  {len(X)} embeddings, {len(set(y))} unika personer")
+    # Upplös alias till primärnamn
+    y = [alias_map.get(label, label) for label in y]
+    print(f"  {len(X)} embeddings, {len(set(y))} unika personer (efter alias-upplösning)")
 
     print("Laddar processed-statistik...")
     proc_stats = load_processed_stats(Path(args.processed))
+    # Upplös alias i processed-stats också
+    resolved_stats: Dict[str, Dict] = defaultdict(lambda: {"total": 0, "ok": 0, "fail": 0, "reasons": defaultdict(int)})
+    for person, ps in proc_stats.items():
+        primary = alias_map.get(person, person)
+        resolved_stats[primary]["total"] += ps["total"]
+        resolved_stats[primary]["ok"] += ps["ok"]
+        resolved_stats[primary]["fail"] += ps["fail"]
+        for reason, count in ps["reasons"].items():
+            resolved_stats[primary]["reasons"][reason] += count
+    proc_stats = resolved_stats
 
     print("Beräknar mått per person...")
     metrics = compute_person_metrics(X, y, proc_stats)
@@ -259,7 +393,7 @@ def main() -> None:
             issue_a = determine_primary_issue(m, True, partner)
             issue_b = determine_primary_issue(m2, True, person)
 
-            rows.append({
+            row_data = {
                 "person_a": person,
                 "person_b": partner,
                 "samples_a": m["samples"],
@@ -276,13 +410,15 @@ def main() -> None:
                 "issue_a": issue_a,
                 "issue_b": issue_b,
                 "score": combined_score,
-            })
+            }
+            row_data["recommendation"] = generate_recommendation(row_data, m, m2)
+            rows.append(row_data)
             seen_pairs.add(person)
             seen_pairs.add(partner)
         else:
             # Enskild person
             issue = determine_primary_issue(m, False, None)
-            rows.append({
+            row_data = {
                 "person_a": person,
                 "person_b": "",
                 "samples_a": m["samples"],
@@ -299,7 +435,9 @@ def main() -> None:
                 "issue_a": issue,
                 "issue_b": "",
                 "score": m["score"],
-            })
+            }
+            row_data["recommendation"] = generate_recommendation(row_data, m, None)
+            rows.append(row_data)
             seen_pairs.add(person)
 
     # Sortera efter poäng och ta topp N
@@ -311,6 +449,8 @@ def main() -> None:
     fieldnames = [
         "Rank",
         "Person A", "Person B",
+        "Recommendation",
+        "Uncertainty Score",
         "Samples A", "Samples B",
         "Fail Rate A", "Fail Rate B",
         "Fail Reasons A", "Fail Reasons B",
@@ -318,7 +458,6 @@ def main() -> None:
         "Confusion Distance",
         "Outliers A", "Outliers B",
         "Issue A", "Issue B",
-        "Uncertainty Score",
     ]
 
     with output_path.open("w", newline="", encoding="utf-8") as f:
@@ -342,6 +481,7 @@ def main() -> None:
                 "Outliers B": row["outliers_b"],
                 "Issue A": row["issue_a"],
                 "Issue B": row["issue_b"],
+                "Recommendation": row["recommendation"],
                 "Uncertainty Score": f"{row['score']:.3f}",
             })
 

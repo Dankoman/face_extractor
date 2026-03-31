@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Apply merge?.csv suggestions to merge.txt without creating duplicates."""
+"""Apply merge/to_be_merged.csv suggestions to merge.txt without creating duplicates."""
 from __future__ import annotations
 
 import argparse
@@ -146,13 +146,13 @@ def apply_candidates(
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Apply merge?.csv suggestions to merge.txt")
+    ap = argparse.ArgumentParser(description="Apply to_be_merged.csv suggestions to merge.txt")
     ap.add_argument("--merge", type=Path, default=Path("merge.txt"), help="Path to merge.txt")
     ap.add_argument(
         "--candidates",
         type=Path,
-        default=Path("merge?.csv"),
-        help="Candidate alias file (default: merge?.csv)",
+        default=Path("merge/to_be_merged.csv"),
+        help="Candidate alias file (default: merge/to_be_merged.csv)",
     )
     args = ap.parse_args()
 
