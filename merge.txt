@@ -66,7 +66,7 @@ Olivia Cassi|Dzhili
 Christina Cavazos|Darina
 Alice Paradise|Poly White|Polly White
 Suzanna Aye|Suzanna A
-Julija Roberta|Nikoletta
+Nikoleta|Julija Roberta|Nikoletta
 Leyla Falcon|Leya Falcon
 Yenn Cat|Agrus
 Anna Morna|Anastasia Morna
@@ -166,11 +166,11 @@ Sarika Ahe|Sarika A|Darina Nikitina
 Sandra Mark|Sandra De Marco
 Vera King|Lexi Foxy
 Valeri Christik|Nicole Ross
-Sandy Fantasy|Vega Vixen
+Vega Vixen|Sandy Fantasy
 Violette Pure|Violette Pink
 Samanta Cruz|Samantha Cruuz
 Sandi Lymm|Shelly Jones
-Airu Oshima|Sara Saijo|Sara Saijyo
+Airu Oshima|Riko Oshima|Sara Saijo|Sara Saijyo
 Rio Kagawa|Haruka Sasano
 Hannah May Rose|Samantha Shain
 Sarah James|Sarah McDonald
@@ -981,3 +981,4 @@ Vanessa Mae|Vanessa Paradise
 Sheena Shaw|Sweet Bunny
 Adora Black|Adora
 Barbora Kovarikova|Barbora
+Anita Bellini|Anita Berlusconi
