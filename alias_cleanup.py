@@ -85,14 +85,15 @@ def normalize_directory(dir_path: Path, prefix: str, rename_map: Dict[str, str],
         tmp.rename(dest)
         rename_map[original] = str(dest)
         stats.files_renamed += 1
-
-
 def move_alias_files(
     alias_dir: Path,
     main_dir: Path,
     move_map: Dict[str, str],
     stats: Stats,
 ) -> None:
+    if alias_dir.resolve() == main_dir.resolve():
+        return
+
     files = sorted([p for p in alias_dir.iterdir() if p.is_file()], key=lambda p: p.name.casefold())
     if not files:
         try:
@@ -194,21 +195,25 @@ def main() -> None:
     stats = Stats(alias_dirs_found=len(existing_aliases))
 
     rename_map: Dict[str, str] = {}
-    for alias in existing_aliases:
-        before = stats.files_renamed
-        normalize_directory(data_root / alias, alias, rename_map, stats)
-        if stats.files_renamed > before:
-            stats.alias_dirs_normalized += 1
-
-    primary_dirs = sorted({alias_map[alias] for alias in existing_aliases}, key=str.casefold)
-    for primary in primary_dirs:
-        dir_path = data_root / primary
-        if not dir_path.exists():
+    
+    # Normalize ALL relevant directories once (both aliases and primaries)
+    # This prevents the "Jessica Lo-001-konflikt.jpg" see-saw bug
+    primary_dirs = {alias_map[alias] for alias in existing_aliases}
+    all_dirs_to_normalize = sorted(set(existing_aliases) | primary_dirs, key=str.casefold)
+    
+    for name in all_dirs_to_normalize:
+        dir_path = data_root / name
+        if not dir_path.is_dir():
             continue
+        
         before = stats.files_renamed
-        normalize_directory(dir_path, primary, rename_map, stats)
+        normalize_directory(dir_path, name, rename_map, stats)
+        
         if stats.files_renamed > before:
-            stats.main_dirs_normalized += 1
+            if name in existing_aliases and name not in primary_dirs:
+                stats.alias_dirs_normalized += 1
+            else:
+                stats.main_dirs_normalized += 1
 
     move_map: Dict[str, str] = {}
     for alias in existing_aliases:

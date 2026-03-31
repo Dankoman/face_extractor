@@ -56,17 +56,14 @@ def apply_candidates(
             continue
         primary_candidate = names[0]
         queue = list(names)
-        collected_order: List[str] = []
         collected_set = set()
         primaries_seen: List[str] = []
-        insert_index = len(order)
 
         while queue:
             name = queue.pop(0).strip()
             if not name or name in collected_set:
                 continue
             collected_set.add(name)
-            collected_order.append(name)
             old_primary = alias_map.get(name)
             if old_primary and old_primary not in primaries_seen:
                 primaries_seen.append(old_primary)

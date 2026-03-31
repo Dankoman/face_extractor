@@ -20,6 +20,26 @@ import processed_db
 # load_alias_map ersatt av processed_db.get_alias_map()
 
 
+def load_similar_exclusions(path: Path, alias_map: Dict[str, str]) -> Set[frozenset[str]]:
+    """Ladda par som inte ska mergas (trots likhet) från en fil (namn1|namn2)."""
+    exclusions: Set[frozenset[str]] = set()
+    if not path.exists():
+        return exclusions
+
+    with path.open("r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or "|" not in line:
+                continue
+            parts = [p.strip() for p in line.split("|")]
+            if len(parts) >= 2:
+                # Upplös alias direkt vid inläsning
+                p1 = alias_map.get(parts[0], parts[0])
+                p2 = alias_map.get(parts[1], parts[1])
+                exclusions.add(frozenset([p1, p2]))
+    return exclusions
+
+
 def load_embeddings(emb_path: Path) -> Tuple[List[np.ndarray], List[str]]:
     if not emb_path.exists():
         raise SystemExit(f"Embeddings-filen hittades inte: {emb_path}")
@@ -35,6 +55,7 @@ def compute_person_metrics(
     X: List[np.ndarray],
     y: List[str],
     proc_stats: Dict[str, Dict],
+    exclusions: Set[frozenset[str]],
 ) -> Dict[str, Dict]:
     """Beräkna per-person-mått från embeddings."""
 
@@ -81,9 +102,15 @@ def compute_person_metrics(
             outliers = 0
 
         # --- Närmaste annan person (inter-klass) ---
-        nearest_idx = int(centroid_dists[i].argmin())
+        # Kopiera avståndsraden för att kunna maska exkluderade
+        dists = centroid_dists[i].copy()
+        for j, other_person in enumerate(centroid_labels):
+            if frozenset([person, other_person]) in exclusions:
+                dists[j] = np.inf
+
+        nearest_idx = int(dists.argmin())
         nearest_person = centroid_labels[nearest_idx]
-        nearest_distance = float(centroid_dists[i, nearest_idx])
+        nearest_distance = float(dists[nearest_idx])
 
         # --- Fail-rate ---
         ps = proc_stats.get(person, {"total": 0, "ok": 0, "fail": 0, "reasons": {}})
@@ -289,6 +316,8 @@ def main() -> None:
                         help="Output CSV-fil")
     parser.add_argument("--top", type=int, default=50,
                         help="Antal mest osäkra att visa")
+    parser.add_argument("--exclusions", default="similar_exclusions.txt",
+                        help="Fil med par som INTE ska mergas (namn1|namn2)")
     args = parser.parse_args()
 
     print("Laddar databas...")
@@ -317,8 +346,12 @@ def main() -> None:
             resolved_stats[primary]["reasons"][reason] += count
     proc_stats = resolved_stats
 
+    print("Laddar exkluderingar...")
+    exclusions = load_similar_exclusions(Path(args.exclusions), alias_map)
+    print(f"  {len(exclusions)} exkluderade lika-par")
+
     print("Beräknar mått per person...")
-    metrics = compute_person_metrics(X, y, proc_stats)
+    metrics = compute_person_metrics(X, y, proc_stats, exclusions)
 
     print("Detekterar förväxlingspar...")
     mutual_pairs = detect_confusion_pairs(metrics)
