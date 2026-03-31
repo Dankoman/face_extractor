@@ -43,7 +43,7 @@ for i in range(len(labs)):
 pairs.sort(key=lambda t: -t[2])
 top_pairs = pairs[:MAX_ROWS]
 
-output_path = Path("merge/to_be_merged.csv")
+output_path = Path("to_be_merged.csv")
 with output_path.open("w", encoding="utf-8") as fp:
     for a, b, s in top_pairs:
         fp.write(f"{a}|{b}||{s:.3f}\n")

@@ -287,7 +287,7 @@ Lexi Fox|Lexie Fux|Lexie Fox
 Camille Cute|Camille Sun
 Balina A Yana|Balina
 Playful Ann|Playful Anne
-Inga Zolva|Inga
+Colette Dupree|Inga Zolva|Inga
 Ferrara Gomez|Ferrera Gomez
 Carmen Joy|Kelly White
 Sweetie Doll|Kate White|Katarina A
@@ -313,7 +313,7 @@ Sofi Smile|Sony Smile
 Haley Hunter|Hailey Hunter
 Lana Broks|Helana
 Agness Miller|Agness
-Riley Ann|Riley Anne
+Riley Anne|Riley Ann
 Charlotte O Ryan|Charlotte Cross
 Ella Storm|El Storm
 Kylie Kane|Dahlia Taylor
@@ -413,7 +413,7 @@ Dominika Chybova|Dominika C|Dominika
 Emiri Momota|Sumire Mizukawa
 Jacquetta Wheeler|Jenny McClain
 Minxx Marii|Minxx Marley
-Sylvia Laurent|Szilvia Lauren
+Szilvia Lauren|Sylvia Laurent
 Julianne James|Julia James
 Anastasia|Monika Benz
 Runa Kobayashi|Akubi Yumemi
@@ -601,7 +601,7 @@ Sonya Durganova|Elena May|Tessa Ray
 Nikki Hunter|Nicki Hunter
 Stacy Bloom|Pammie Lee
 Ashley Scott|Ashlyn Molloy
-Sicilia Model|Sicilia
+Marie Silvia|Sicilia Model|Sicilia
 Jessie Saint|Steve Holmes
 Gia OhMy|Gia Oh My
 Purr Simona|Simona Purr
@@ -766,7 +766,7 @@ Bella Rolland|Bella Roland
 Hibiki Ohtsuki|Hibiki Otsuki
 Jenna J Ross|Jenna Ross
 Bethany Benz|Honey Lou
-Carol O|Mariana
+Carol O|Vilma Banky|Mariana
 Bambi Stewart|Zsuzsa Tanczos|Bambi Steward
 Daniella Rose|Barbera
 Bella Banxx|Bella Banx
@@ -788,7 +788,7 @@ RayVeness|Rayveness
 SaRenna Lee|Sarenna Lee
 Niemira|Niemira Foxx
 Cream Sofi|Felice
-Charlyse Bella|Charlyse Angel
+Charlyse Bella|Charlise Bella|Charlyse Angel
 Andi Rye|Zoe Sparx
 Amber Ashley|Amber Ashlee
 Michele James|Michelle James
@@ -976,3 +976,8 @@ Veronica Franco|Veronica
 Tita Sahara Rosita|Tita Rosita|Tita Sahara
 Anastasia Andis|Anastasia F
 Milana Zara|Milana G
+Amabella A|Amabella
+Vanessa Mae|Vanessa Paradise
+Sheena Shaw|Sweet Bunny
+Adora Black|Adora
+Barbora Kovarikova|Barbora
