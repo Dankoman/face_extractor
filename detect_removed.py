@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import argparse
-import json
 import pickle
 from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List, Set, Tuple
+
+import processed_db
 
 
 def load_alias_map(merge_path: Path) -> Dict[str, str]:
@@ -26,39 +27,6 @@ def load_alias_map(merge_path: Path) -> Dict[str, str]:
         for name in names:
             alias_to_primary[name] = primary
     return alias_to_primary
-
-
-def find_missing_images(processed_path: Path) -> Tuple[List[str], Dict[str, List[str]]]:
-    """Läs processed JSONL och hitta paths som inte finns på disk.
-
-    Returns:
-        missing_paths: lista av saknade fil-paths
-        person_missing: {person_label: [missing_paths]}
-    """
-    missing_paths: List[str] = []
-    person_missing: Dict[str, List[str]] = defaultdict(list)
-
-    if not processed_path.exists():
-        return missing_paths, person_missing
-
-    with processed_path.open("r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                rec = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            path_str = rec.get("path", "")
-            if not path_str:
-                continue
-            if not Path(path_str).exists():
-                person_label = Path(path_str).parent.name
-                missing_paths.append(path_str)
-                person_missing[person_label].append(path_str)
-
-    return missing_paths, dict(person_missing)
 
 
 def resolve_affected_persons(
@@ -88,43 +56,6 @@ def resolve_affected_persons(
         affected_labels.update(primary_to_aliases.get(primary, {primary}))
 
     return affected_labels
-
-
-def prune_processed(processed_path: Path, affected_labels: Set[str]) -> Tuple[int, int]:
-    """Ta bort alla processed-poster för berörda personer.
-
-    Returns:
-        (removed, kept)
-    """
-    if not processed_path.exists():
-        return 0, 0
-
-    tmp_path = processed_path.with_suffix(processed_path.suffix + ".tmp")
-    removed = 0
-    kept = 0
-
-    with processed_path.open("r", encoding="utf-8") as src, \
-         tmp_path.open("w", encoding="utf-8") as dst:
-        for line in src:
-            stripped = line.strip()
-            if not stripped:
-                continue
-            try:
-                rec = json.loads(stripped)
-            except json.JSONDecodeError:
-                dst.write(line)
-                kept += 1
-                continue
-            path_str = rec.get("path", "")
-            person = Path(path_str).parent.name if path_str else ""
-            if person in affected_labels:
-                removed += 1
-            else:
-                dst.write(line)
-                kept += 1
-
-    tmp_path.replace(processed_path)
-    return removed, kept
 
 
 def prune_embeddings(embeddings_path: Path, affected_labels: Set[str]) -> Tuple[int, int]:
@@ -169,9 +100,9 @@ def main() -> None:
         help="Pickle-fil med embeddings",
     )
     parser.add_argument(
-        "--processed",
-        default="arcface_work-ppic/processed-ppic.jsonl",
-        help="JSONL-fil med processade bilder",
+        "--db",
+        default="arcface_work-ppic/processed.db",
+        help="SQLite-databas med processade bilder",
     )
     parser.add_argument(
         "--merge",
@@ -180,16 +111,19 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    processed_path = Path(args.processed)
+    db_path = Path(args.db)
     embeddings_path = Path(args.embeddings)
     merge_path = Path(args.merge)
     data_root = Path(args.data_root)
 
+    conn = processed_db.open_db(db_path)
+
     # 1. Hitta bilder som saknas på disk
-    missing_paths, person_missing = find_missing_images(processed_path)
+    missing_paths, person_missing = processed_db.find_missing_paths(conn)
 
     if not missing_paths:
         print("✅ Inga borttagna bilder hittades – inget att rensa.")
+        conn.close()
         return
 
     print(f"🔍 Hittade {len(missing_paths)} borttagna bild(er) för {len(person_missing)} person(er):")
@@ -202,14 +136,16 @@ def main() -> None:
 
     print(f"\n🏷️  Berörda labels (inkl. alias): {sorted(affected_labels)}")
 
-    # 3. Rensa processed
-    proc_removed, proc_kept = prune_processed(processed_path, affected_labels)
+    # 3. Rensa processed (DB)
+    proc_removed = processed_db.remove_by_persons(conn, affected_labels)
+    proc_kept = processed_db.count(conn)
     print(f"\n📋 Processed: {proc_removed} poster borttagna, {proc_kept} kvar")
 
     # 4. Rensa embeddings
     emb_removed, emb_kept = prune_embeddings(embeddings_path, affected_labels)
     print(f"🧠 Embeddings: {emb_removed} borttagna, {emb_kept} kvar")
 
+    conn.close()
     print(f"\n♻️  Kör encode-steget för att re-bearbeta kvarvarande bilder för: {sorted(person_missing.keys())}")
 
 

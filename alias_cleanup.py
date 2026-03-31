@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Normalize alias/main folders, move alias files, and keep processed JSONL in sync.
+Normalize alias/main folders, move alias files, and keep processed DB in sync.
 """
 
 from __future__ import annotations
@@ -15,6 +15,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, Iterable, List, Tuple
 
+import processed_db
+
 
 @dataclass
 class Stats:
@@ -27,7 +29,7 @@ class Stats:
     created_main_dirs: int = 0
     removed_missing_entries: int = 0
     removed_empty_dirs: int = 0
-    json_updates: int = 0
+    db_updates: int = 0
 
     def as_dict(self) -> Dict[str, int]:
         return self.__dict__
@@ -35,31 +37,26 @@ class Stats:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Normalize alias/main folders, move alias files, and update processed JSON."
+        description="Normalize alias/main folders, move alias files, and update processed DB."
     )
     parser.add_argument("--data-root", required=True, type=Path, help="Root directory that contains performer folders.")
     parser.add_argument("--merge", required=True, type=Path, help="merge.txt file with alias mapping.")
     parser.add_argument(
-        "--processed",
+        "--db",
         required=True,
         type=Path,
-        help="processed-ppic.jsonl that should be updated with the new file locations.",
-    )
-    parser.add_argument(
-        "--backup-suffix",
-        default="alias_cleanup",
-        help="Suffix for the processed JSONL backup file (default: alias_cleanup).",
+        help="SQLite-databas (processed.db) som ska uppdateras med nya filplatser.",
     )
     parser.add_argument(
         "--prune-missing",
         action="store_true",
-        help="Remove JSON entries whose files are missing after the move.",
+        help="Remove DB entries whose files are missing after the move.",
     )
     parser.add_argument(
         "--missing-log",
         type=Path,
         default=None,
-        help="Optional path where missing JSON entries should be logged (and removed if --prune-missing is set).",
+        help="Optional path where missing DB entries should be logged (and removed if --prune-missing is set).",
     )
     return parser.parse_args()
 
@@ -157,69 +154,55 @@ def remove_empty_dirs(root: Path) -> int:
     return removed
 
 
-def update_json(
-    processed_path: Path,
+def update_db(
+    conn,
     rename_map: Dict[str, str],
     move_map: Dict[str, str],
     stats: Stats,
-    backup_suffix: str,
 ) -> None:
+    """Uppdatera databasrader med nya filplatser."""
     if not rename_map and not move_map:
         return
-    backup_path = processed_path.with_name(f"{processed_path.name}.{backup_suffix}.{int(time.time())}.bak")
-    shutil.copy2(processed_path, backup_path)
-    tmp_path = processed_path.with_suffix(".tmp_alias_cleanup")
-    updated = 0
-    with processed_path.open() as src, tmp_path.open("w") as dst:
-        for line in src:
-            data = json.loads(line)
-            path = data.get("path")
-            new_path = rename_map.get(path, path)
-            new_path = move_map.get(new_path, new_path)
-            if new_path != path:
-                data["path"] = new_path
-                updated += 1
-            dst.write(json.dumps(data, ensure_ascii=False) + "\n")
-    tmp_path.replace(processed_path)
-    stats.json_updates += updated
+    # Bygg en samlad mapping: old_path -> new_path
+    combined: Dict[str, str] = {}
+    for old, new in rename_map.items():
+        combined[old] = new
+    for old, new in move_map.items():
+        # Om gamla pathen redan renamedats, koppla vidare
+        actual_old = old
+        for orig, renamed in rename_map.items():
+            if renamed == old:
+                actual_old = orig
+                break
+        combined[actual_old] = new
+
+    stats.db_updates = processed_db.update_paths_batch(conn, combined)
 
 
 def prune_missing_entries(
-    processed_path: Path,
+    conn,
     stats: Stats,
     missing_log: Path | None,
 ) -> None:
-    missing_rows: List[str] = []
-    with processed_path.open() as fh:
-        for idx, line in enumerate(fh, 1):
-            data = json.loads(line)
-            if not Path(data["path"]).exists():
-                missing_rows.append(f"{idx}:{data['path']}")
+    missing_paths, _ = processed_db.find_missing_paths(conn)
+
     if missing_log:
-        if missing_rows:
-            missing_log.write_text("\n".join(missing_rows))
+        if missing_paths:
+            missing_log.write_text("\n".join(missing_paths))
         elif missing_log.exists():
             missing_log.unlink()
-    if not missing_rows:
+
+    if not missing_paths:
         return
-    missing_set = {row.split(":", 1)[1] for row in missing_rows}
-    tmp_path = processed_path.with_suffix(".tmp_alias_clean_missing")
-    removed = 0
-    with processed_path.open() as src, tmp_path.open("w") as dst:
-        for line in src:
-            data = json.loads(line)
-            if data["path"] in missing_set:
-                removed += 1
-                continue
-            dst.write(line)
-    tmp_path.replace(processed_path)
+
+    removed = processed_db.remove_by_paths(conn, missing_paths)
     stats.removed_missing_entries += removed
 
 
 def main() -> None:
     args = parse_args()
     data_root = args.data_root
-    processed_json = args.processed
+    db_path = args.db
     merge_file = args.merge
 
     alias_map = load_alias_map(merge_file)
@@ -250,13 +233,15 @@ def main() -> None:
             continue
         move_alias_files(data_root / alias, data_root / main, move_map, stats)
 
-    update_json(processed_json, rename_map, move_map, stats, args.backup_suffix)
+    conn = processed_db.open_db(db_path)
+    update_db(conn, rename_map, move_map, stats)
 
     stats.removed_empty_dirs = remove_empty_dirs(data_root)
 
     if args.prune_missing or args.missing_log:
-        prune_missing_entries(processed_json, stats, args.missing_log)
+        prune_missing_entries(conn, stats, args.missing_log)
 
+    conn.close()
     print(json.dumps(stats.as_dict(), ensure_ascii=False, indent=2))
 
 

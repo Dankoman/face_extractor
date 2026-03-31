@@ -5,7 +5,6 @@ from __future__ import annotations
 import argparse
 import csv
 import difflib
-import json
 import pickle
 import sys
 from collections import defaultdict
@@ -14,6 +13,8 @@ from typing import Dict, List, Optional, Set, Tuple
 
 import numpy as np
 from sklearn.metrics.pairwise import cosine_distances
+
+import processed_db
 
 
 def load_alias_map(merge_path: Path) -> Dict[str, str]:
@@ -42,36 +43,7 @@ def load_embeddings(emb_path: Path) -> Tuple[List[np.ndarray], List[str]]:
     return data["X"], data["y"]
 
 
-def load_processed_stats(proc_path: Path) -> Dict[str, Dict]:
-    """Returnerar per-person-statistik från processed JSONL.
-
-    Returns dict: {person: {"total": int, "ok": int, "fail": int, "reasons": {reason: count}}}
-    """
-    stats: Dict[str, Dict] = defaultdict(lambda: {"total": 0, "ok": 0, "fail": 0, "reasons": defaultdict(int)})
-    if not proc_path.exists():
-        return stats
-    with proc_path.open("r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                rec = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            path_str = rec.get("path", "")
-            if not path_str:
-                continue
-            person = Path(path_str).parent.name
-            ok = rec.get("ok", True)
-            reason = rec.get("reason", "unknown")
-            stats[person]["total"] += 1
-            if ok:
-                stats[person]["ok"] += 1
-            else:
-                stats[person]["fail"] += 1
-                stats[person]["reasons"][reason] += 1
-    return stats
+# load_processed_stats ersatt av processed_db.get_stats_by_person()
 
 
 def compute_person_metrics(
@@ -326,8 +298,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Analysera modellens osäkerhet")
     parser.add_argument("--embeddings", default="arcface_work-ppic/embeddings_ppic.pkl",
                         help="Pickle-fil med embeddings")
-    parser.add_argument("--processed", default="arcface_work-ppic/processed-ppic.jsonl",
-                        help="JSONL-fil med processade bilder")
+    parser.add_argument("--db", default="arcface_work-ppic/processed.db",
+                        help="SQLite-databas med processade bilder")
     parser.add_argument("--merge", default="merge.txt",
                         help="Alias-fil (pipe-separerad)")
     parser.add_argument("--output", default="uncertainty_report.csv",
@@ -347,7 +319,9 @@ def main() -> None:
     print(f"  {len(X)} embeddings, {len(set(y))} unika personer (efter alias-upplösning)")
 
     print("Laddar processed-statistik...")
-    proc_stats = load_processed_stats(Path(args.processed))
+    conn = processed_db.open_db(Path(args.db))
+    proc_stats = processed_db.get_stats_by_person(conn)
+    conn.close()
     # Upplös alias i processed-stats också
     resolved_stats: Dict[str, Dict] = defaultdict(lambda: {"total": 0, "ok": 0, "fail": 0, "reasons": defaultdict(int)})
     for person, ps in proc_stats.items():

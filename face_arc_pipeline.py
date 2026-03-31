@@ -13,12 +13,13 @@ ArcFace-pipeline med progressbar & checkpoints.
 - Checkpoints: processed.jsonl + embeddings.pkl
 """
 import sys
-import json
 import pickle
 import argparse
 import math
 from pathlib import Path
 from typing import List, Tuple, Optional, Dict, Set
+
+import processed_db
 
 import cv2
 import numpy as np
@@ -37,7 +38,7 @@ MODELS_DIR = SCRIPT_DIR / "models"
 DEFAULT_DATA_ROOT   = "/home/marqs/Bilder/pBook"
 DEFAULT_WORKDIR     = "./arcface_work-ppic"
 EMB_PKL             = "embeddings_ppic.pkl"
-PROC_JSONL          = "processed-ppic.jsonl"
+PROC_DB             = "processed.db"
 MODEL_PKL           = "face_knn_arcface_ppic.pkl"
 
 MIN_WIDTH           = 40
@@ -106,25 +107,7 @@ def init_app(providers: List[str]) -> FaceAnalysis:
     return app
 
 
-def load_processed(proc_path: Path) -> set:
-    done = set()
-    if proc_path.exists():
-        with proc_path.open("r", encoding="utf-8") as f:
-            for line in f:
-                try:
-                    rec = json.loads(line)
-                    done.add(rec["path"])
-                except Exception:
-                    pass
-    return done
-
-
-def append_processed(proc_path: Path, img_path: str, ok: bool, reason: str = "ok") -> None:
-    with proc_path.open("a", encoding="utf-8") as f:
-        rec = {"path": img_path, "ok": ok}
-        if not ok:
-            rec["reason"] = reason
-        f.write(json.dumps(rec) + "\n")
+# load_processed / append_processed ersatta av processed_db-modulen
 
 
 def load_embeddings(emb_path: Path) -> Tuple[List[np.ndarray], List[str]]:
@@ -377,12 +360,16 @@ def encode(args) -> None:
     alias_map = load_aliases(MERGE_TXT)
     data_root = Path(args.data_root)
     workdir = Path(args.workdir); workdir.mkdir(parents=True, exist_ok=True)
-    emb_path = workdir/EMB_PKL; proc_path = workdir/PROC_JSONL
-    X,y = load_embeddings(emb_path); processed=load_processed(proc_path)
+    emb_path = workdir/EMB_PKL
+    db_path = workdir/PROC_DB
+    X,y = load_embeddings(emb_path)
+    conn = processed_db.open_db(db_path)
+    processed = processed_db.load_processed_set(conn)
     all_imgs = [(path, alias_map.get(label, label)) for path, label in iter_images(data_root)]
     todo=[(p,lbl) for p,lbl in all_imgs if p not in processed]
     if not todo:
         print("✅ Inget att göra – allt är redan processat.")
+        conn.close()
         return
     print(f"🔍 Att processa: {len(todo)} bilder (skippar {len(processed)})")
     app=init_app(["CPUExecutionProvider"]); rec_model=app.models["recognition"]
@@ -409,13 +396,14 @@ def encode(args) -> None:
             except Exception as e:
                 reason="exception"
                 print(f"❌ {path}: {e}",file=sys.stderr)
-            append_processed(proc_path,path,ok,reason)
+            processed_db.add_processed(conn, path, ok, reason)
             if ok and len(X)%args.flush_every==0:
                 save_embeddings(emb_path,X,y)
     except KeyboardInterrupt:
         print("\n⏹️ Avbrutet. Sparar state...")
     finally:
         save_embeddings(emb_path,X,y)
+        conn.close()
         print(f"💾 Sparade embeddings ({len(X)}) till {emb_path}")
 
 
@@ -458,7 +446,6 @@ def train(args) -> None:
 
 
 def main():
-    global EMB_PKL
     global EMB_PKL
     ap=argparse.ArgumentParser(description="ArcFace-pipeline (encode/train, fallback & upsampling)")
     ap.add_argument("--data-root",default=DEFAULT_DATA_ROOT)
