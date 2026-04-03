@@ -166,7 +166,7 @@ def remove_by_persons(conn: sqlite3.Connection, person_labels: Iterable[str]) ->
 def update_path(conn: sqlite3.Connection, old_path: str, new_path: str) -> bool:
     """Uppdatera en path. Returnerar True om raden hittades."""
     cur = conn.execute(
-        "UPDATE processed SET path = ? WHERE path = ?",
+        "UPDATE OR REPLACE processed SET path = ? WHERE path = ?",
         (new_path, old_path),
     )
     conn.commit()
@@ -179,7 +179,7 @@ def update_paths_batch(conn: sqlite3.Connection, mapping: Dict[str, str]) -> int
         return 0
     updated = 0
     for old, new in mapping.items():
-        cur = conn.execute("UPDATE processed SET path = ? WHERE path = ?", (new, old))
+        cur = conn.execute("UPDATE OR REPLACE processed SET path = ? WHERE path = ?", (new, old))
         updated += cur.rowcount
     conn.commit()
     return updated

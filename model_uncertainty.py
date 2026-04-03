@@ -20,6 +20,22 @@ import processed_db
 # load_alias_map ersatt av processed_db.get_alias_map()
 
 
+def load_ignore_list(path: Path, alias_map: Dict[str, str]) -> Set[str]:
+    """Ladda lista över personer som ska ignoreras helt i rapporten."""
+    ignores: Set[str] = set()
+    if not path.exists():
+        return ignores
+
+    with path.open("r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            primary = alias_map.get(line, line)
+            ignores.add(primary)
+    return ignores
+
+
 def load_similar_exclusions(path: Path, alias_map: Dict[str, str]) -> Set[frozenset[str]]:
     """Ladda par som inte ska mergas (trots likhet) från en fil (namn1|namn2)."""
     exclusions: Set[frozenset[str]] = set()
@@ -318,6 +334,8 @@ def main() -> None:
                         help="Antal mest osäkra att visa")
     parser.add_argument("--exclusions", default="similar_exclusions.txt",
                         help="Fil med par som INTE ska mergas (namn1|namn2)")
+    parser.add_argument("--ignore", default="uncertainty_exceptions.txt",
+                        help="Fil med personer som ska ignoreras i rapporten")
     args = parser.parse_args()
 
     print("Laddar databas...")
@@ -350,6 +368,9 @@ def main() -> None:
     exclusions = load_similar_exclusions(Path(args.exclusions), alias_map)
     print(f"  {len(exclusions)} exkluderade lika-par")
 
+    ignores = load_ignore_list(Path(args.ignore), alias_map)
+    print(f"  {len(ignores)} personer i ignoreringslistan")
+
     print("Beräknar mått per person...")
     metrics = compute_person_metrics(X, y, proc_stats, exclusions)
 
@@ -372,6 +393,9 @@ def main() -> None:
     sorted_persons = sorted(metrics.keys(), key=lambda p: -metrics[p]["score"])
 
     for person in sorted_persons:
+        if person in ignores:
+            continue
+            
         if person in seen_pairs:
             continue
         m = metrics[person]
