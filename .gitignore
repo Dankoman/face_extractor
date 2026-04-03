@@ -25,3 +25,4 @@ uncertainty_report.csv
 arcface_work-ppic/processed.db-shm
 .gitignore
 .gitignore
+arcface_work-ppic/processed.db-wal
