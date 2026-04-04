@@ -749,6 +749,76 @@ def stashdb_performer_details():
 # -------------------------------------------------
 # API – topp‑K och raw‑bytesstöd
 # -------------------------------------------------
+def _detect_all_angles_unique(app, img_rgb):
+    H, W = img_rgb.shape[:2]
+    all_faces = []
+    
+    # 0 deg
+    f0 = detect_once(app, img_rgb)
+    for face in f0:
+        all_faces.append({"f": face, "bbox": face.bbox.astype(float)})
+        
+    # 90 CW: x_orig = y_rot, y_orig = H - x_rot
+    img_90 = cv2.rotate(img_rgb, cv2.ROTATE_90_CLOCKWISE)
+    f90 = detect_once(app, img_90)
+    for face in f90:
+        bx = face.bbox.astype(float)
+        nx1, ny1, nx2, ny2 = bx[1], H - bx[2], bx[3], H - bx[0]
+        # x_orig = y_rot, y_orig = H - x_rot
+        all_faces.append({"f": face, "bbox": [nx1, ny1, nx2, ny2]})
+        
+    # 180: x_orig = W - x_rot, y_orig = H - y_rot
+    img_180 = cv2.rotate(img_rgb, cv2.ROTATE_180)
+    f180 = detect_once(app, img_180)
+    for face in f180:
+        bx = face.bbox.astype(float)
+        nx1, ny1, nx2, ny2 = W - bx[2], H - bx[3], W - bx[0], H - bx[1]
+        all_faces.append({"f": face, "bbox": [nx1, ny1, nx2, ny2]})
+        
+    # 270 CW (90 CCW): x_orig = W - y_rot, y_orig = x_rot
+    img_270 = cv2.rotate(img_rgb, cv2.ROTATE_90_COUNTERCLOCKWISE)
+    f270 = detect_once(app, img_270)
+    for face in f270:
+        bx = face.bbox.astype(float)
+        nx1, ny1, nx2, ny2 = W - bx[3], bx[0], W - bx[1], bx[2]
+        all_faces.append({"f": face, "bbox": [nx1, ny1, nx2, ny2]})
+
+    def compute_iou(b1, b2):
+        x1_inter = max(b1[0], b2[0])
+        y1_inter = max(b1[1], b2[1])
+        x2_inter = min(b1[2], b2[2])
+        y2_inter = min(b1[3], b2[3])
+        if x2_inter <= x1_inter or y2_inter <= y1_inter:
+            return 0.0
+        inter_area = (x2_inter - x1_inter) * (y2_inter - y1_inter)
+        b1_area = (b1[2] - b1[0]) * (b1[3] - b1[1])
+        b2_area = (b2[2] - b2[0]) * (b2[3] - b2[1])
+        return inter_area / float(max(b1_area + b2_area - inter_area, 1e-6))
+
+    unique_faces = []
+    for item in all_faces:
+        b1 = item["bbox"]
+        is_dup = False
+        for uf in unique_faces:
+            if compute_iou(b1, uf["bbox"]) > 0.4:
+                is_dup = True
+                if item["f"].det_score > uf["f"].det_score:
+                    uf["f"] = item["f"]
+                    uf["bbox"] = b1
+                break
+        if not is_dup:
+            unique_faces.append(item)
+            
+    res = []
+    for uf in unique_faces:
+        bx = uf["bbox"]
+        # Säkra koordinaterna (min/max)
+        rx1, ry1, rx2, ry2 = min(bx[0], bx[2]), min(bx[1], bx[3]), max(bx[0], bx[2]), max(bx[1], bx[3])
+        uf["f"].bbox = np.array([rx1, ry1, rx2, ry2], dtype=np.float32)
+        res.append(uf["f"])
+        
+    return res
+
 @app.post("/recognize")
 def recognize():
     try:
@@ -765,15 +835,22 @@ def recognize():
             return jsonify({"error": "Kunde inte läsa bilden"}), 400
         img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
 
-        faces = detect_once(app_insight, img_rgb)
+        all_angles = request.args.get("all_angles", "0") == "1"
+        if all_angles:
+            faces = _detect_all_angles_unique(app_insight, img_rgb)
+        else:
+            faces = detect_once(app_insight, img_rgb)
+            
         if not faces:
             return jsonify([])
+
+        raw_faces = request.args.get("raw_faces", "0") == "1"
 
         boxes = _faces_to_boxes(faces)
         result = []
         for face, box in zip(faces, boxes):
             female_prob, filter_active = _female_probability(face, img_bgr)
-            if filter_active and (female_prob is None or female_prob < FEMALE_THRESHOLD):
+            if filter_active and (female_prob is None or female_prob < FEMALE_THRESHOLD) and not raw_faces:
                 continue
             emb = getattr(face, "embedding", None)
             entry = {"box": box, "candidates": []}
