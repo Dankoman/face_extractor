@@ -107,11 +107,16 @@ def sync_person(source_folder: Path, primary_name: str, dry_run: bool):
     if existing_images:
         create_btrfs_snapshot(target_dir, BACKUP_DIR, primary_name, dry_run)
         
-        should_wipe_all = len(existing_images) >= 20
+        # Räkna nya bilder för att avgöra om det är en fullständig "tvätt" eller bara tillägg
+        new_images = [f for f in source_folder.iterdir() if f.is_file() and f.suffix.lower() in IMAGE_EXTENSIONS]
+        
+        # Vi rensar bara helt om BÅDA källorna är stora (>= 20 bilder).
+        # Om någon är liten så vill vi hellre slå ihop dem för att bygga upp samlingen.
+        should_wipe_all = (len(existing_images) >= 20) and (len(new_images) >= 20)
         
         if should_wipe_all:
             if not dry_run:
-                print(f"🧹 Rensar ALLA ({len(existing_images)}) bilder i {target_dir} (Stor mapp)...")
+                print(f"🧹 Rensar ALLA ({len(existing_images)}) bilder i {target_dir} (Fullständig tvätt)...")
                 for img in existing_images:
                     img.unlink()
             else:
@@ -119,13 +124,13 @@ def sync_person(source_folder: Path, primary_name: str, dry_run: bool):
         else:
             if small_images:
                 if not dry_run:
-                    print(f"🧹 Rensar {len(small_images)} småbilder (<=100KB) i {target_dir} (Behåller {len(existing_images) - len(small_images)} stora)...")
+                    print(f"🧹 Rensar {len(small_images)} småbilder (<=100KB) i {target_dir} (Behåller {len(existing_images) - len(small_images)} stora för att MERGA)...")
                     for img in small_images:
                         img.unlink()
                 else:
                     print(f"DRY-RUN: Skulle ha rensat {len(small_images)} småbilder i {target_dir}")
             else:
-                print(f"ℹ️ Behåller alla {len(existing_images)} bilder i {target_dir} (Liten mapp, inga småfiler).")
+                print(f"ℹ️ Behåller alla {len(existing_images)} bilder i {target_dir} (Merge-läge, inga småfiler).")
     else:
         if not dry_run:
             target_dir.mkdir(parents=True, exist_ok=True)
