@@ -92,26 +92,28 @@ def create_btrfs_snapshot(source: Path, target_base: Path, name: str, dry_run: b
         print(f"DRY-RUN: Skulle skapat snapshot av {source} i {snapshot_dir}")
 
 
+def get_image_count(directory: Path) -> int:
+    """Räkna antal bilder i en mapp."""
+    if not directory.exists():
+        return 0
+    return sum(1 for f in directory.iterdir() if f.is_file() and f.suffix.lower() in IMAGE_EXTENSIONS)
+
+
 def sync_person(source_folder: Path, primary_name: str, dry_run: bool):
     """Hantera flytt, rensning och konvertering för en person."""
     target_dir = PBOOK_DIR / primary_name
     
-    # 1. Analysera befintlig målmapp
-    existing_images = []
-    small_images = []
-    if target_dir.exists():
-        existing_images = [f for f in target_dir.iterdir() if f.is_file() and f.suffix.lower() in IMAGE_EXTENSIONS]
-        small_images = [f for f in existing_images if f.stat().st_size <= 100 * 1024] # 100 KB
+    # 1. Analysera befintliga bilder
+    existing_images = [f for f in target_dir.iterdir() if f.is_file() and f.suffix.lower() in IMAGE_EXTENSIONS] if target_dir.exists() else []
+    small_images = [f for f in existing_images if f.stat().st_size <= 100 * 1024] # 100 KB
+    new_images = [f for f in source_folder.iterdir() if f.is_file() and f.suffix.lower() in IMAGE_EXTENSIONS]
 
     # 2. Beslut om rensning och Snapshot
     if existing_images:
         create_btrfs_snapshot(target_dir, BACKUP_DIR, primary_name, dry_run)
         
-        # Räkna nya bilder för att avgöra om det är en fullständig "tvätt" eller bara tillägg
-        new_images = [f for f in source_folder.iterdir() if f.is_file() and f.suffix.lower() in IMAGE_EXTENSIONS]
-        
-        # Vi rensar bara helt om BÅDA källorna är stora (>= 20 bilder).
-        # Om någon är liten så vill vi hellre slå ihop dem för att bygga upp samlingen.
+        # FULL WIPE sker endast om BÅDA mapparna är stora (>= 20 bilder).
+        # Logik: Då är det en komplett ny vaskning som ersätter den gamla.
         should_wipe_all = (len(existing_images) >= 20) and (len(new_images) >= 20)
         
         if should_wipe_all:
@@ -122,15 +124,17 @@ def sync_person(source_folder: Path, primary_name: str, dry_run: bool):
             else:
                 print(f"DRY-RUN: Skulle ha rensat ALLA {len(existing_images)} bilder i {target_dir}")
         else:
+            # MERGE-läge: Vi vill att mappen ska växa.
+            # Vi rensar ändå bort småfiler (skräp) för att höja kvaliteten.
             if small_images:
                 if not dry_run:
-                    print(f"🧹 Rensar {len(small_images)} småbilder (<=100KB) i {target_dir} (Behåller {len(existing_images) - len(small_images)} stora för att MERGA)...")
+                    print(f"🧹 Kvalitetsrens: Tar bort {len(small_images)} småbilder (<=100KB) i {target_dir}.")
                     for img in small_images:
                         img.unlink()
                 else:
                     print(f"DRY-RUN: Skulle ha rensat {len(small_images)} småbilder i {target_dir}")
-            else:
-                print(f"ℹ️ Behåller alla {len(existing_images)} bilder i {target_dir} (Merge-läge, inga småfiler).")
+            
+            print(f"ℹ️ Mergar in {len(new_images)} bilder från Innie till {len(existing_images) - len(small_images)} befintliga stora bilder.")
     else:
         if not dry_run:
             target_dir.mkdir(parents=True, exist_ok=True)
@@ -139,11 +143,7 @@ def sync_person(source_folder: Path, primary_name: str, dry_run: bool):
             print(f"DRY-RUN: Skulle skapat mapp {target_dir}")
 
     # 3. Konvertera och flytta de nya bilderna
-    files = sorted([f for f in source_folder.iterdir() if f.is_file()])
-    for f in files:
-        if f.suffix.lower() not in IMAGE_EXTENSIONS:
-            continue
-            
+    for f in sorted(new_images):
         target_file = target_dir / f"{f.stem}.jpg"
         
         if not dry_run:
@@ -151,12 +151,11 @@ def sync_person(source_folder: Path, primary_name: str, dry_run: bool):
                 if f.suffix.lower() == ".jpg":
                     shutil.move(str(f), str(target_file))
                 else:
-                    # Konvertera till JPG
+                    # Konvertera till JPG (Higher Quality)
                     with Image.open(f) as img:
                         rgb_img = img.convert("RGB")
                         rgb_img.save(target_file, "JPEG", quality=95)
-                    f.unlink() # Ta bort original
-                # print(f"  ➡️ {f.name} -> {target_file.name}")
+                    f.unlink()
             except Exception as e:
                 print(f"  ❌ Fel vid hantering av {f.name}: {e}")
         else:
@@ -166,12 +165,9 @@ def sync_person(source_folder: Path, primary_name: str, dry_run: bool):
     # 4. Ta bort tom källmapp
     if not dry_run:
         try:
-            # Kolla om den är tom (förutom eventuella dolda filer)
             if not any(source_folder.iterdir()):
                 source_folder.rmdir()
                 print(f"✅ Klar med {primary_name}, källmapp borttagen.")
-            else:
-                print(f"⚠️ Källmapp {source_folder} inte tom, sparar den.")
         except Exception as e:
             print(f"⚠️ Kunde inte ta bort {source_folder}: {e}")
 
@@ -187,18 +183,14 @@ def main():
         print("🚀 KÖR I DRY-RUN LÄGE (inga filer ändras)")
         print("Använd --confirm för att faktiskt flytta filer.\n")
 
-    # Ladda mappningar
     merge_map = load_merge_map(MERGE_FILE)
     
-    # Kör analys
     flagged_names = set()
     if not args.skip_analysis:
         flagged_names = run_analysis()
     else:
-        print("⏭️ Hoppar över analys, läser befintlig rapport...")
-        # (Logik för att läsa befintlig rapport om den finns)
+        print("⏭️ Hoppar över ny analys.")
 
-    # Skanna Innie
     if not INNE_DIR.exists():
         print(f"❌ Källmapp {INNE_DIR} finns inte!")
         return
@@ -208,17 +200,29 @@ def main():
     for folder in innie_folders:
         name = folder.name
         primary = merge_map.get(name, name)
+        dest_path = PBOOK_DIR / primary
         
+        # Filter-logik Version 3
         is_flagged = (name in flagged_names) or (primary in flagged_names)
-        is_new = not (PBOOK_DIR / primary).exists()
+        is_new = not dest_path.exists()
         
-        if is_flagged or is_new:
-            reason = "FLAGGAD" if is_flagged else "NY"
-            print(f"\n📦 Bearbetar {name} -> {primary} ({reason})")
+        # Kolla om mappen är liten (färre än 10 bilder)
+        pbook_count = get_image_count(dest_path)
+        is_small = (not is_new) and (pbook_count < 10)
+        
+        if is_flagged or is_new or is_small:
+            reason = []
+            if is_flagged: reason.append("FLAGGAD")
+            if is_new: reason.append("NY")
+            if is_small: reason.append(f"LITEN ({pbook_count} bilder)")
+            
+            print(f"\n📦 Bearbetar {name} -> {primary} ({', '.join(reason)})")
             sync_person(folder, primary, dry_run)
-        else:
-            # print(f"skipping {name} (ej flaggad och finns redan)")
-            pass
+
+    if dry_run:
+        print("\n✨ Dry-run klar. Ingen skada skedd.")
+    else:
+        print("\n✨ Synk klar!")
 
     if dry_run:
         print("\n✨ Dry-run klar. Ingen skada skedd.")
