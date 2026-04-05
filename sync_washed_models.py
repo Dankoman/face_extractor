@@ -6,12 +6,13 @@ import shutil
 import subprocess
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Set
+from typing import Dict, Set, Tuple
 
 from PIL import Image
 
 # Standardinställningar
-INNE_DIR = Path("/home/marqs/Bilder/Innie")
+# Standardinställningar
+DEFAULT_SOURCE_DIR = Path("/home/marqs/Bilder/Innie")
 PBOOK_DIR = Path("/home/marqs/Bilder/pBook")
 BACKUP_DIR = Path("/home/marqs/Bilder/pBook_backups")
 MERGE_FILE = Path("/home/marqs/Programmering/Python/3.11/face_extractor/merge.txt")
@@ -41,15 +42,45 @@ def load_merge_map(path: Path) -> Dict[str, str]:
     return merge_map
 
 
-def run_analysis() -> Set[str]:
-    """Kör model_uncertainty.py och returnera flaggade namn."""
-    report_file = "sync_pipeline_report.csv"
+def parse_report(report_file: str) -> Tuple[Set[str], Set[str]]:
+    """Läs rapporten och returnera (flagged_names, wipe_candidates)."""
+    flagged = set()
+    wipe_candidates = set()
+    
+    def should_wipe(issue_text: str) -> bool:
+        text = issue_text.lower()
+        return any(k in text for k in ["varians", "outlier", "misslyckade"])
+        
+    if os.path.exists(report_file):
+        with open(report_file, "r", encoding="utf-8") as f:
+            reader = csv.DictReader(f, delimiter=";")
+            for row in reader:
+                p_a = row.get("Person A", "")
+                p_b = row.get("Person B", "")
+                i_a = row.get("Issue A", "")
+                i_b = row.get("Issue B", "")
+                if p_a:
+                    flagged.add(p_a)
+                    if should_wipe(i_a): wipe_candidates.add(p_a)
+                if p_b:
+                    flagged.add(p_b)
+                    if should_wipe(i_b): wipe_candidates.add(p_b)
+        print(f"✅ Analys-rapport inläst. {len(flagged)} flaggade (varav {len(wipe_candidates)} rensas helt).")
+    else:
+        print(f"⚠️ Rapportfil {report_file} saknas.")
+    return flagged, wipe_candidates
+
+
+def run_analysis(report_file: str) -> None:
+    """Kör model_uncertainty.py och generera rapport."""
     cmd = [
         "python3", str(UNCERTAINTY_SCRIPT),
         "--db", str(DB_PATH),
         "--embeddings", str(EMB_PATH),
         "--output", report_file,
-        "--top", "1000"
+        "--top", "1000",
+        "--exclusions", str(UNCERTAINTY_SCRIPT.parent / "similar_exclusions.txt"),
+        "--ignore", str(UNCERTAINTY_SCRIPT.parent / "uncertainty_exceptions.txt")
     ]
     
     print(f"🔍 Kör analys: {' '.join(cmd)}...")
@@ -59,20 +90,6 @@ def run_analysis() -> Set[str]:
         print(f"❌ Analysen misslyckades kapitalt: {e}")
         print("⚠️ Avbryter synk för att inte missa flaggade mappar pga miljöfel.")
         exit(1)
-
-    flagged = set()
-    if os.path.exists(report_file):
-        with open(report_file, "r", encoding="utf-8") as f:
-            reader = csv.DictReader(f, delimiter=";")
-            for row in reader:
-                if row.get("Person A"): flagged.add(row["Person A"])
-                if row.get("Person B"): flagged.add(row["Person B"])
-    else:
-        print(f"❌ Fel: {report_file} skapades inte av analysscriptet.")
-        exit(1)
-    
-    print(f"✅ Analys klar. {len(flagged)} flaggade personer hittades.")
-    return flagged
 
 
 def create_btrfs_snapshot(source: Path, target_base: Path, name: str, dry_run: bool):
@@ -99,7 +116,7 @@ def get_image_count(directory: Path) -> int:
     return sum(1 for f in directory.iterdir() if f.is_file() and f.suffix.lower() in IMAGE_EXTENSIONS)
 
 
-def sync_person(source_folder: Path, primary_name: str, dry_run: bool):
+def sync_person(source_folder: Path, primary_name: str, dry_run: bool, force_wipe: bool = False):
     """Hantera flytt, rensning och konvertering för en person."""
     target_dir = PBOOK_DIR / primary_name
     
@@ -112,9 +129,9 @@ def sync_person(source_folder: Path, primary_name: str, dry_run: bool):
     if existing_images:
         create_btrfs_snapshot(target_dir, BACKUP_DIR, primary_name, dry_run)
         
-        # FULL WIPE sker endast om BÅDA mapparna är stora (>= 20 bilder).
-        # Logik: Då är det en komplett ny vaskning som ersätter den gamla.
-        should_wipe_all = (len(existing_images) >= 20) and (len(new_images) >= 20)
+        # FULL WIPE sker om force_wipe (blandade identiteter) är satt
+        # ELLER endast om BÅDA mapparna är stora (>= 20 bilder).
+        should_wipe_all = force_wipe or ((len(existing_images) >= 20) and (len(new_images) >= 20))
         
         if should_wipe_all:
             if not dry_run:
@@ -134,7 +151,7 @@ def sync_person(source_folder: Path, primary_name: str, dry_run: bool):
                 else:
                     print(f"DRY-RUN: Skulle ha rensat {len(small_images)} småbilder i {target_dir}")
             
-            print(f"ℹ️ Mergar in {len(new_images)} bilder från Innie till {len(existing_images) - len(small_images)} befintliga stora bilder.")
+            print(f"ℹ️ Mergar in {len(new_images)} bilder från källmappen till {len(existing_images) - len(small_images)} befintliga stora bilder i pBook.")
     else:
         if not dry_run:
             target_dir.mkdir(parents=True, exist_ok=True)
@@ -176,7 +193,10 @@ def main():
     parser = argparse.ArgumentParser(description="Synka tvättade modeller från Innie till pBook")
     parser.add_argument("--confirm", action="store_true", help="Genomför faktiska ändringar (utan denna körs dry-run)")
     parser.add_argument("--skip-analysis", action="store_true", help="Använd befintlig rapport istället för att köra ny analys")
+    parser.add_argument("--source", type=str, default=str(DEFAULT_SOURCE_DIR), help=f"Källmapp (standard: {DEFAULT_SOURCE_DIR})")
     args = parser.parse_args()
+
+    source_dir = Path(args.source)
 
     dry_run = not args.confirm
     if dry_run:
@@ -185,25 +205,28 @@ def main():
 
     merge_map = load_merge_map(MERGE_FILE)
     
-    flagged_names = set()
+    report_file = "sync_pipeline_report.csv"
     if not args.skip_analysis:
-        flagged_names = run_analysis()
+        run_analysis(report_file)
     else:
         print("⏭️ Hoppar över ny analys.")
 
-    if not INNE_DIR.exists():
-        print(f"❌ Källmapp {INNE_DIR} finns inte!")
+    flagged_names, wipe_candidates = parse_report(report_file)
+
+    if not source_dir.exists():
+        print(f"❌ Källmapp {source_dir} finns inte!")
         return
 
-    innie_folders = sorted([d for d in INNE_DIR.iterdir() if d.is_dir()])
+    source_folders = sorted([d for d in source_dir.iterdir() if d.is_dir()])
     
-    for folder in innie_folders:
+    for folder in source_folders:
         name = folder.name
         primary = merge_map.get(name, name)
         dest_path = PBOOK_DIR / primary
         
         # Filter-logik Version 3
         is_flagged = (name in flagged_names) or (primary in flagged_names)
+        is_wipe = (name in wipe_candidates) or (primary in wipe_candidates)
         is_new = not dest_path.exists()
         
         # Kolla om mappen är liten (färre än 10 bilder)
@@ -212,12 +235,13 @@ def main():
         
         if is_flagged or is_new or is_small:
             reason = []
-            if is_flagged: reason.append("FLAGGAD")
+            if is_wipe: reason.append("FULL WIPE")
+            elif is_flagged: reason.append("FLAGGAD")
             if is_new: reason.append("NY")
             if is_small: reason.append(f"LITEN ({pbook_count} bilder)")
             
             print(f"\n📦 Bearbetar {name} -> {primary} ({', '.join(reason)})")
-            sync_person(folder, primary, dry_run)
+            sync_person(folder, primary, dry_run, force_wipe=is_wipe)
 
     if dry_run:
         print("\n✨ Dry-run klar. Ingen skada skedd.")

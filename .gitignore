@@ -26,3 +26,4 @@ arcface_work-ppic/processed.db-shm
 .gitignore
 .gitignore
 arcface_work-ppic/processed.db-wal
+sync_pipeline_report.csv
