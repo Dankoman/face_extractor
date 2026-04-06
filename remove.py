@@ -14,6 +14,13 @@ def read_lines(path: Path) -> List[str]:
 
 import processed_db
 
+try:
+    from rich.console import Console
+    from rich.table import Table
+    HAS_RICH = True
+except ImportError:
+    HAS_RICH = False
+
 # load_alias_map ersatt av processed_db.get_alias_map()
 
 
@@ -83,11 +90,19 @@ def main() -> None:
         pickle.dump({"X": X_new, "y": y_new}, f)
 
     missing = [name for name, count in counters.items() if count == 0]
-    print(f"Tog bort {removed} poster från '{embeddings_path}' baserat på '{remove_path}'.")
-    if missing:
-        print("Ej hittade i embeddings:")
-        for name in missing:
-            print(f"  - {name}")
+    if HAS_RICH:
+        console = Console()
+        console.print(f"✅ Tog bort [bold red]{removed}[/bold red] poster från '{embeddings_path}' baserat på '{remove_path}'.")
+        if missing:
+            console.print("[yellow]Ej hittade i embeddings:[/yellow]")
+            for name in missing:
+                console.print(f"  - [dim]{name}[/dim]")
+    else:
+        print(f"Tog bort {removed} poster från '{embeddings_path}' baserat på '{remove_path}'.")
+        if missing:
+            print("Ej hittade i embeddings:")
+            for name in missing:
+                print(f"  - {name}")
 
 
 if __name__ == "__main__":

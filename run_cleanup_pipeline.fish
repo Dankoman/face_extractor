@@ -51,7 +51,7 @@ run_step_if_exists "[3/8] Pre-clean processed DB" $PROCESSED_DB \
     $PYTHON remove_processed.py --db $PROCESSED_DB --remove $REMOVE_FILE
 run_step_if_exists "[4/8] Pre-clean embeddings" $EMBEDDINGS_PKL \
     $PYTHON remove.py --embeddings $EMBEDDINGS_PKL --remove $REMOVE_FILE
-run_step "[5/8] Encode fresh embeddings" $PYTHON face_arc_pipeline.py --mode encode --data-root $DATA_ROOT --workdir $WORKDIR --allow-upsample --verbose --max-yaw 40
+run_step "[5/8] Encode fresh embeddings" $PYTHON face_arc_pipeline.py --mode encode --data-root $DATA_ROOT --workdir $WORKDIR --allow-upsample --ui --max-yaw 40 $argv
 run_step "[6/8] Merge aliases" $PYTHON merge.py
 run_step "[7/8] Train KNN model" $PYTHON face_arc_pipeline.py --mode train --embeddings $MERGED_EMBEDDINGS --model-out $MODEL_OUT
 run_step "[8/8] Normalize & move alias files" $PYTHON alias_cleanup.py --data-root $DATA_ROOT --db $PROCESSED_DB --prune-missing --missing-log "$WORKDIR/missing_after_alias_cleanup.txt"

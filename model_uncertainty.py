@@ -13,6 +13,8 @@ from typing import Dict, List, Optional, Set, Tuple
 
 import numpy as np
 from sklearn.metrics.pairwise import cosine_distances
+import concurrent.futures
+import multiprocessing
 
 import processed_db
 
@@ -67,13 +69,72 @@ def load_embeddings(emb_path: Path) -> Tuple[List[np.ndarray], List[str]]:
 # load_processed_stats ersatt av processed_db.get_stats_by_person()
 
 
+# --- Modul-globala variabler för multiprocessing (använder Linux fork-fördel för noll-kopiering) ---
+_MP_LABELS = []
+_MP_DISTS = None
+_MP_EMBS = {}
+_MP_CENTROIDS = {}
+_MP_EXC_MAP = {}
+_MP_STATS = {}
+
+def _worker_process_person(i: int) -> Tuple[str, Dict]:
+    person = _MP_LABELS[i]
+    embs = np.vstack(_MP_EMBS[person])
+    n_samples = len(embs)
+    centroid = _MP_CENTROIDS[person]
+
+    if n_samples >= 2:
+        dists_to_centroid = cosine_distances(embs, centroid.reshape(1, -1)).flatten()
+        intra_variance = float(dists_to_centroid.mean())
+        intra_std = float(dists_to_centroid.std())
+
+        if intra_std > 0:
+            outlier_threshold = intra_variance + 2 * intra_std
+            outliers = int((dists_to_centroid > outlier_threshold).sum())
+        else:
+            outliers = 0
+    else:
+        intra_variance = 0.0
+        intra_std = 0.0
+        outliers = 0
+
+    dists = _MP_DISTS[i].copy()
+    for exc_idx in _MP_EXC_MAP.get(person, []):
+        dists[exc_idx] = np.inf
+
+    nearest_idx = int(dists.argmin())
+    nearest_person = _MP_LABELS[nearest_idx]
+    nearest_distance = float(dists[nearest_idx])
+
+    ps = _MP_STATS.get(person, {"total": 0, "ok": 0, "fail": 0, "reasons": {}})
+    total_processed = ps["total"]
+    fail_count = ps["fail"]
+    fail_rate = fail_count / total_processed if total_processed > 0 else 0.0
+    top_fail_reasons = sorted(ps["reasons"].items(), key=lambda x: -x[1])[:3]
+    fail_reasons_str = "; ".join(f"{r}({c})" for r, c in top_fail_reasons) if top_fail_reasons else ""
+
+    return person, {
+        "samples": n_samples,
+        "intra_variance": intra_variance,
+        "intra_std": intra_std,
+        "outliers": outliers,
+        "nearest_person": nearest_person,
+        "nearest_distance": nearest_distance,
+        "fail_rate": fail_rate,
+        "fail_count": fail_count,
+        "total_processed": total_processed,
+        "fail_reasons": fail_reasons_str,
+    }
+
+
 def compute_person_metrics(
     X: List[np.ndarray],
     y: List[str],
     proc_stats: Dict[str, Dict],
     exclusions: Set[frozenset[str]],
 ) -> Dict[str, Dict]:
-    """Beräkna per-person-mått från embeddings."""
+    """Beräkna per-person-mått från embeddings flertrådat."""
+    global _MP_LABELS, _MP_DISTS, _MP_EMBS, _MP_CENTROIDS, _MP_EXC_MAP, _MP_STATS
 
     # Gruppera embeddings per person
     person_embeddings: Dict[str, List[np.ndarray]] = defaultdict(list)
@@ -81,7 +142,6 @@ def compute_person_metrics(
         person_embeddings[label].append(emb)
 
     persons = sorted(person_embeddings.keys())
-    metrics: Dict[str, Dict] = {}
 
     # Beräkna centroider
     centroids: Dict[str, np.ndarray] = {}
@@ -96,58 +156,34 @@ def compute_person_metrics(
     # Sätt diagonalen till inf så vi inte matchar mot sig själv
     np.fill_diagonal(centroid_dists, np.inf)
 
-    for i, person in enumerate(centroid_labels):
-        embs = np.vstack(person_embeddings[person])
-        n_samples = len(embs)
+    # O(1) uppslag för exkluderingar för att fixa flaskhals (O(N) -> O(1))
+    label_to_idx = {p: idx for idx, p in enumerate(centroid_labels)}
+    exclusion_map = defaultdict(list)
+    for exc in exclusions:
+        l_exc = list(exc)
+        if len(l_exc) == 2:
+            p1, p2 = l_exc
+            if p1 in label_to_idx and p2 in label_to_idx:
+                exclusion_map[p1].append(label_to_idx[p2])
+                exclusion_map[p2].append(label_to_idx[p1])
 
-        # --- Intra-klass-varians (medel cosine-avstånd till centroid) ---
-        if n_samples >= 2:
-            dists_to_centroid = cosine_distances(embs, centroids[person].reshape(1, -1)).flatten()
-            intra_variance = float(dists_to_centroid.mean())
-            intra_std = float(dists_to_centroid.std())
+    # Popolera global state för multiprocessing
+    _MP_LABELS = centroid_labels
+    _MP_DISTS = centroid_dists
+    _MP_EMBS = person_embeddings
+    _MP_CENTROIDS = centroids
+    _MP_EXC_MAP = exclusion_map
+    _MP_STATS = proc_stats
 
-            # Outliers: embeddings > 2 std från centroid
-            if intra_std > 0:
-                outlier_threshold = intra_variance + 2 * intra_std
-                outliers = int((dists_to_centroid > outlier_threshold).sum())
-            else:
-                outliers = 0
-        else:
-            intra_variance = 0.0
-            intra_std = 0.0
-            outliers = 0
-
-        # --- Närmaste annan person (inter-klass) ---
-        # Kopiera avståndsraden för att kunna maska exkluderade
-        dists = centroid_dists[i].copy()
-        for j, other_person in enumerate(centroid_labels):
-            if frozenset([person, other_person]) in exclusions:
-                dists[j] = np.inf
-
-        nearest_idx = int(dists.argmin())
-        nearest_person = centroid_labels[nearest_idx]
-        nearest_distance = float(dists[nearest_idx])
-
-        # --- Fail-rate ---
-        ps = proc_stats.get(person, {"total": 0, "ok": 0, "fail": 0, "reasons": {}})
-        total_processed = ps["total"]
-        fail_count = ps["fail"]
-        fail_rate = fail_count / total_processed if total_processed > 0 else 0.0
-        top_fail_reasons = sorted(ps["reasons"].items(), key=lambda x: -x[1])[:3]
-        fail_reasons_str = "; ".join(f"{r}({c})" for r, c in top_fail_reasons) if top_fail_reasons else ""
-
-        metrics[person] = {
-            "samples": n_samples,
-            "intra_variance": intra_variance,
-            "intra_std": intra_std,
-            "outliers": outliers,
-            "nearest_person": nearest_person,
-            "nearest_distance": nearest_distance,
-            "fail_rate": fail_rate,
-            "fail_count": fail_count,
-            "total_processed": total_processed,
-            "fail_reasons": fail_reasons_str,
-        }
+    metrics: Dict[str, Dict] = {}
+    n_cpus = multiprocessing.cpu_count()
+    
+    with concurrent.futures.ProcessPoolExecutor(max_workers=n_cpus) as executor:
+        chunksize = max(1, len(centroid_labels) // (n_cpus * 4))
+        results = executor.map(_worker_process_person, range(len(centroid_labels)), chunksize=chunksize)
+        
+        for person, data in results:
+            metrics[person] = data
 
     return metrics
 

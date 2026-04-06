@@ -18,6 +18,7 @@ pkgs.mkShell {
     pkgs.dejavu_fonts
     pkgs.tmux
     pkgs.byobu
+    pkgs.chafa
   ];
 
   shellHook = ''
@@ -37,7 +38,7 @@ pkgs.mkShell {
 
     if [ -z "$SKIP_PIP" ]; then
       pip install --upgrade pip
-      pip install --no-cache-dir onnxruntime insightface opencv-python-headless==4.12.0.88 numpy flask flask-cors
+      pip install --no-cache-dir onnxruntime insightface opencv-python-headless==4.12.0.88 numpy flask flask-cors rich
     fi
     
     if [ -z "$SKIP_API" ]; then

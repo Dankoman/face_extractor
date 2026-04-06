@@ -9,6 +9,13 @@ from typing import Dict, Iterable, List, Set
 
 import processed_db
 
+try:
+    from rich.console import Console
+    from rich.table import Table
+    HAS_RICH = True
+except ImportError:
+    HAS_RICH = False
+
 
 def read_lines(path: Path) -> List[str]:
     return [line.strip() for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
@@ -60,9 +67,19 @@ def main() -> None:
 
     conn.close()
 
-    print(f"Totalrader (före): {total_before}")
-    print(f"Borttagna: {removed}")
-    print(f"Kvar: {kept}")
+    if HAS_RICH:
+        console = Console()
+        table = Table(title="Rapport: Borttagning ur Processed")
+        table.add_column("Mått", style="cyan")
+        table.add_column("Antal", justify="right")
+        table.add_row("Rader före", str(total_before))
+        table.add_row("Borttagna", f"[bold red]{removed}[/bold red]")
+        table.add_row("Kvar", f"[bold green]{kept}[/bold green]")
+        console.print(table)
+    else:
+        print(f"Totalrader (före): {total_before}")
+        print(f"Borttagna: {removed}")
+        print(f"Kvar: {kept}")
 
 
 if __name__ == "__main__":

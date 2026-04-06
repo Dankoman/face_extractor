@@ -30,6 +30,22 @@ from sklearn.neighbors import KNeighborsClassifier
 
 from insightface.app import FaceAnalysis
 
+try:
+    from rich.console import Console
+    from rich.live import Live
+    from rich.table import Table
+    from rich.panel import Panel
+    from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, TimeElapsedColumn, MofNCompleteColumn
+    from rich.layout import Layout
+    from rich.text import Text
+    from rich.align import Align
+    HAS_RICH = True
+except ImportError:
+    HAS_RICH = False
+
+import subprocess
+import shutil
+
 # Dynamisk sökväg till script-katalogen för modeller
 SCRIPT_DIR = Path(__file__).resolve().parent
 MODELS_DIR = SCRIPT_DIR / "models"
@@ -191,6 +207,39 @@ def estimate_yaw_from_kps(kps: Optional[np.ndarray], width: int, height: int) ->
         yaw = None
     return yaw
 
+def render_face_preview(face_crop_bgr, width=40, height=20):
+    """Renderar en liten ANSI-preview av ansiktet."""
+    if face_crop_bgr is None or face_crop_bgr.size == 0:
+        return ""
+    
+    # Försök chafa först om det finns
+    if shutil.which("chafa"):
+        try:
+            # Skriv till temporär fil och kör chafa
+            import tempfile
+            with tempfile.NamedTemporaryFile(suffix=".png") as tmp:
+                cv2.imwrite(tmp.name, face_crop_bgr)
+                res = subprocess.check_output(["chafa", "--size", f"{width}x{height}", tmp.name], text=True)
+                return res
+        except Exception:
+            pass
+
+    # Fallback: Enkel ANSI-block-renderare (gråskala/färg om möjligt)
+    try:
+        h, w = face_crop_bgr.shape[:2]
+        small = cv2.resize(face_crop_bgr, (width, height), interpolation=cv2.INTER_AREA)
+        output = []
+        for y in range(height):
+            line = ""
+            for x in range(width):
+                b, g, r = small[y, x]
+                # ANSI truecolor escape
+                line += f"\033[48;2;{r};{g};{b}m "
+            output.append(line + "\033[0m")
+        return "\n".join(output)
+    except Exception:
+        return "[Preview Error]"
+
 # ----------- Embedding-funktion -----------
 
 def compute_embedding(app: FaceAnalysis,
@@ -349,6 +398,14 @@ def encode(args) -> None:
         return
     print(f"🔍 Att processa: {len(todo)} bilder (skippar {len(processed)})")
     app=init_app(["CPUExecutionProvider"]); rec_model=app.models["recognition"]
+    
+    if args.ui and HAS_RICH:
+        run_encode_rich(todo, app, rec_model, conn, X, y, emb_path, args)
+    else:
+        run_encode_tqdm(todo, app, rec_model, conn, X, y, emb_path, args)
+
+
+def run_encode_tqdm(todo, app, rec_model, conn, X, y, emb_path, args):
     try:
         for path,label in tqdm(todo,unit="img"):
             ok=False
@@ -379,6 +436,118 @@ def encode(args) -> None:
         print("\n⏹️ Avbrutet. Sparar state...")
     finally:
         save_embeddings(emb_path,X,y)
+
+
+def run_encode_rich(todo, app, rec_model, conn, X, y, emb_path, args):
+    console = Console()
+    progress = Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        MofNCompleteColumn(),
+        TimeElapsedColumn(),
+        console=console,
+        expand=True
+    )
+    
+    task_id = progress.add_task("Processar bilder...", total=len(todo))
+    last_results = []
+    MAX_LOG = 8
+    
+    layout = Layout()
+    layout.split_row(
+        Layout(name="main", ratio=2),
+        Layout(name="visual", ratio=1, visible=args.visual)
+    )
+    
+    def get_log_table():
+        table = Table(title="Senaste händelser", expand=True, box=None)
+        table.add_column("Fil", style="cyan", no_wrap=True)
+        table.add_column("Status", style="bold")
+        table.add_column("Anledning", style="dim")
+        for res in last_results[-MAX_LOG:]:
+            clr = "green" if res['ok'] else "red"
+            st = "✅ OK" if res['ok'] else "❌ FAIL"
+            table.add_row(Path(res['path']).name, Text(st, style=clr), res['reason'])
+        return table
+
+    preview_content = ""
+
+    with Live(layout, console=console, refresh_per_second=4, screen=False) as live:
+        try:
+            for path, label in todo:
+                ok = False
+                reason = "unknown"
+                face_crop_for_visual = None
+                
+                # Om vi vill ha visual, måste vi få tag i bildrutan. 
+                # Vi ändrar compute_embedding lite i framtiden eller gör det här.
+                # För nu: kör som vanligt.
+                
+                try:
+                    # En fuling för att få tag i bildrutan för visual mode
+                    if args.visual:
+                        img_rgb = load_image_rgb(path)
+                        if img_rgb is not None:
+                            # Enkel detektion för preview
+                            bgr = rgb_to_bgr(img_rgb)
+                            faces = app.get(bgr)
+                            if faces:
+                                f = faces[0]
+                                x1, y1, x2, y2 = f.bbox.astype(int)
+                                h_img, w_img = bgr.shape[:2]
+                                x1, y1, x2, y2 = max(x1,0), max(y1,0), min(x2,w_img), min(y2,h_img)
+                                face_crop_for_visual = bgr[y1:y2, x1:x2]
+                                preview_content = render_face_preview(face_crop_for_visual)
+
+                    emb, n, fb, reason = compute_embedding(
+                        app, rec_model, path,
+                        args.allow_fallback, args.allow_upsample,
+                        args.max_yaw,
+                        args.min_det_score,
+                        args.min_focus,
+                        verbose=False # Tvinga False i UI-mode
+                    )
+                    ok = emb is not None
+                    if ok:
+                        X.append(emb)
+                        y.append(label)
+                except Exception as e:
+                    reason = f"error: {str(e)[:30]}"
+                
+                processed_db.add_processed(conn, path, ok, reason)
+                last_results.append({'path': path, 'ok': ok, 'reason': reason})
+                
+                # Uppdatera UI
+                progress.update(task_id, advance=1, description=f"Handlägger: [bold]{Path(path).name}[/bold]")
+                
+                main_panel = Panel.fit(
+                    Layout(progress),
+                    title="ArcFace Pipeline",
+                    subtitle=f"Totalt: {len(X)} embeddings"
+                )
+                
+                # Vi bygger om layouten varje steg
+                log_table = get_log_table()
+                
+                # Skapa en layout-struktur för 'main'
+                main_layout = Layout()
+                main_layout.split_column(
+                    Layout(Align.center(Panel(progress, title="Framsteg")), size=5),
+                    Layout(Panel(log_table, title="Logg"))
+                )
+                
+                layout["main"].update(main_layout)
+                if args.visual:
+                    layout["visual"].update(Panel(Align.center(preview_content), title="Face Preview"))
+                
+                if ok and len(X) % args.flush_every == 0:
+                    save_embeddings(emb_path, X, y)
+                    
+        except KeyboardInterrupt:
+            console.print("\n[bold yellow]⏹️ Avbrutet av användare. Sparar...[/bold yellow]")
+        finally:
+            save_embeddings(emb_path, X, y)
         conn.close()
         print(f"💾 Sparade embeddings ({len(X)}) till {emb_path}")
 
@@ -434,6 +603,8 @@ def main():
     ap.add_argument("--min-per-class",type=int,default=MIN_PER_CLASS_DEF)
     ap.add_argument("--allow-fallback",action="store_true")
     ap.add_argument("--allow-upsample",action="store_true")
+    ap.add_argument("--ui", action="store_true", help="Visa grafiskt TUI istället för tqdm")
+    ap.add_argument("--visual", action="store_true", help="Visa bild-preview i terminalen (kräver --ui)")
     ap.add_argument(
         "--max-yaw",
         type=float,
