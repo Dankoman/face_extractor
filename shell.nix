@@ -16,6 +16,8 @@ pkgs.mkShell {
     pkgs.boost pkgs.eigen
     pkgs.curl pkgs.openssl pkgs.git pkgs.zlib
     pkgs.dejavu_fonts
+    pkgs.onnxruntime
+    pkgs.opencv
     pkgs.tmux
     pkgs.byobu
     pkgs.chafa
@@ -24,7 +26,7 @@ pkgs.mkShell {
   shellHook = ''
     echo "✅ Nix-miljö laddad."
 
-    export LD_LIBRARY_PATH="${pkgs.zlib}/lib:${pkgs.stdenv.cc.cc.lib}/lib:$LD_LIBRARY_PATH"
+    export LD_LIBRARY_PATH="${pkgs.zlib}/lib:${pkgs.stdenv.cc.cc.lib}/lib:${pkgs.onnxruntime}/lib:${pkgs.opencv}/lib:$LD_LIBRARY_PATH"
     export STASH_URL="http://192.168.0.50:9999"
     export STASHDB_API_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiJlYjAzMzRkNi03NTQ4LTRhYjAtYjExMC0xOGEyZmI2Y2YwMDQiLCJzdWIiOiJBUElLZXkiLCJpYXQiOjE2NjM0NDg1MjZ9.ckvz_oNpI_HSCGSSOa1xI2mprnoDCBl7EuoBAXcK6Us"
     export STRICT_NAME_MATCH=1
