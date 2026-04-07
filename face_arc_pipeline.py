@@ -39,6 +39,8 @@ try:
     from rich.layout import Layout
     from rich.text import Text
     from rich.align import Align
+    from rich.style import Style
+    from rich.color import Color
     HAS_RICH = True
 except ImportError:
     HAS_RICH = False
@@ -207,10 +209,10 @@ def estimate_yaw_from_kps(kps: Optional[np.ndarray], width: int, height: int) ->
         yaw = None
     return yaw
 
-def render_face_preview(face_crop_bgr, width=40, height=20):
-    """Renderar en liten ANSI-preview av ansiktet."""
+def render_face_preview(face_crop_bgr, width=60, height=30):
+    """Renderar en ANSI-preview av ansiktet med högre upplösning."""
     if face_crop_bgr is None or face_crop_bgr.size == 0:
-        return ""
+        return "" if not HAS_RICH else Text("")
     
     # Försök chafa först om det finns
     if shutil.which("chafa"):
@@ -219,8 +221,11 @@ def render_face_preview(face_crop_bgr, width=40, height=20):
             import tempfile
             with tempfile.NamedTemporaryFile(suffix=".png") as tmp:
                 cv2.imwrite(tmp.name, face_crop_bgr)
-                res = subprocess.check_output(["chafa", "--size", f"{width}x{height}", tmp.name], text=True)
-                return res
+                res = subprocess.check_output(
+                    ["chafa", "--size", f"{width}x{height}", "--symbols", "all", "--colors", "full", tmp.name],
+                    text=True
+                )
+                return Text.from_ansi(res) if HAS_RICH else res
         except Exception:
             pass
 
@@ -228,17 +233,30 @@ def render_face_preview(face_crop_bgr, width=40, height=20):
     try:
         h, w = face_crop_bgr.shape[:2]
         small = cv2.resize(face_crop_bgr, (width, height), interpolation=cv2.INTER_AREA)
-        output = []
-        for y in range(height):
-            line = ""
-            for x in range(width):
-                b, g, r = small[y, x]
-                # ANSI truecolor escape
-                line += f"\033[48;2;{r};{g};{b}m "
-            output.append(line + "\033[0m")
-        return "\n".join(output)
+        
+        if HAS_RICH:
+            res = Text()
+            for y in range(height):
+                for x in range(width):
+                    b, g, r = small[y, x]
+                    # I terminaler ser ett space ut som ca 1:2 aspect ratio.
+                    # Vi använder ett space per pixel för fallback.
+                    res.append(" ", style=Style(bgcolor=Color.from_rgb(r, g, b)))
+                if y < height - 1:
+                    res.append("\n")
+            return res
+        else:
+            output = []
+            for y in range(height):
+                line = ""
+                for x in range(width):
+                    b, g, r = small[y, x]
+                    # ANSI truecolor escape
+                    line += f"\033[48;2;{r};{g};{b}m "
+                output.append(line + "\033[0m")
+            return "\n".join(output)
     except Exception:
-        return "[Preview Error]"
+        return "[Preview Error]" if not HAS_RICH else Text("[Preview Error]", style="bold red")
 
 # ----------- Embedding-funktion -----------
 
@@ -407,9 +425,11 @@ def encode(args) -> None:
 
 def run_encode_tqdm(todo, app, rec_model, conn, X, y, emb_path, args):
     try:
-        for path,label in tqdm(todo,unit="img"):
-            ok=False
-            reason="unknown"
+        pbar = tqdm(todo, unit="img")
+        for path, label in pbar:
+            pbar.set_description(f"👤 {label[:20]:<20}")
+            ok = False
+            reason = "unknown"
             try:
                 emb, n, fb, reason = compute_embedding(
                     app, rec_model, path,
@@ -443,9 +463,12 @@ def run_encode_rich(todo, app, rec_model, conn, X, y, emb_path, args):
     progress = Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
-        BarColumn(),
+        BarColumn(bar_width=None),
         MofNCompleteColumn(),
+        TextColumn("[bold cyan]{task.speed:>4.1f} img/s"),
         TimeElapsedColumn(),
+        TextColumn("•"),
+        TimeRemainingColumn(),
         console=console,
         expand=True
     )
@@ -456,19 +479,20 @@ def run_encode_rich(todo, app, rec_model, conn, X, y, emb_path, args):
     
     layout = Layout()
     layout.split_row(
-        Layout(name="main", ratio=2),
+        Layout(name="main", ratio=1),
         Layout(name="visual", ratio=1, visible=args.visual)
     )
     
     def get_log_table():
         table = Table(title="Senaste händelser", expand=True, box=None)
-        table.add_column("Fil", style="cyan", no_wrap=True)
-        table.add_column("Status", style="bold")
+        table.add_column("Person", style="magenta", no_wrap=True)
+        table.add_column("Fil", style="cyan", no_wrap=True, overflow="ellipsis", max_width=50)
+        table.add_column("Status", style="bold", width=10)
         table.add_column("Anledning", style="dim")
         for res in last_results[-MAX_LOG:]:
             clr = "green" if res['ok'] else "red"
             st = "✅ OK" if res['ok'] else "❌ FAIL"
-            table.add_row(Path(res['path']).name, Text(st, style=clr), res['reason'])
+            table.add_row(res['label'], Path(res['path']).name, Text(st, style=clr), res['reason'])
         return table
 
     preview_content = ""
@@ -516,10 +540,10 @@ def run_encode_rich(todo, app, rec_model, conn, X, y, emb_path, args):
                     reason = f"error: {str(e)[:30]}"
                 
                 processed_db.add_processed(conn, path, ok, reason)
-                last_results.append({'path': path, 'ok': ok, 'reason': reason})
+                last_results.append({'path': path, 'label': label, 'ok': ok, 'reason': reason})
                 
                 # Uppdatera UI
-                progress.update(task_id, advance=1, description=f"Handlägger: [bold]{Path(path).name}[/bold]")
+                progress.update(task_id, advance=1, description=f"Handlägger: {label} / [bold]{Path(path).name}[/bold]")
                 
                 main_panel = Panel.fit(
                     Layout(progress),
