@@ -35,7 +35,7 @@ try:
     from rich.live import Live
     from rich.table import Table
     from rich.panel import Panel
-    from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, TimeElapsedColumn, MofNCompleteColumn
+    from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, TimeElapsedColumn, MofNCompleteColumn, TimeRemainingColumn, ProgressColumn
     from rich.layout import Layout
     from rich.text import Text
     from rich.align import Align
@@ -90,6 +90,13 @@ FEMALE_THRESH = 0.0
 # ---------------------------------------------
 
 # -------------- Hjälpfunktioner --------------
+
+class ProcessingSpeedColumn(ProgressColumn):
+    def render(self, task):
+        speed = task.speed
+        if speed is None:
+            return Text("?.? img/s", style="bold cyan")
+        return Text(f"{speed:>4.1f} img/s", style="bold cyan")
 
 def init_app(providers: List[str]) -> FaceAnalysis:
     app = FaceAnalysis(
@@ -465,7 +472,7 @@ def run_encode_rich(todo, app, rec_model, conn, X, y, emb_path, args):
         TextColumn("[progress.description]{task.description}"),
         BarColumn(bar_width=None),
         MofNCompleteColumn(),
-        TextColumn("[bold cyan]{task.speed:>4.1f} img/s"),
+        ProcessingSpeedColumn(),
         TimeElapsedColumn(),
         TextColumn("•"),
         TimeRemainingColumn(),
@@ -473,47 +480,64 @@ def run_encode_rich(todo, app, rec_model, conn, X, y, emb_path, args):
         expand=True
     )
     
-    task_id = progress.add_task("Processar bilder...", total=len(todo))
+    task_id = progress.add_task("Startar...", total=len(todo))
     last_results = []
-    MAX_LOG = 8
+    MAX_LOG = 10
     
     layout = Layout()
     layout.split_row(
         Layout(name="main", ratio=1),
         Layout(name="visual", ratio=1, visible=args.visual)
     )
+    layout["main"].split_column(
+        Layout(name="progress_box", size=6),
+        Layout(name="log_box")
+    )
     
-    def get_log_table():
+    def update_ui(current_label=None, current_path=None, preview_content="", live_obj=None):
+        if current_label and current_path:
+            progress.update(task_id, description=f"👤 {current_label} / [dim]{Path(current_path).name}[/dim]")
+        
+        # Uppdatera log-tabell
         table = Table(title="Senaste händelser", expand=True, box=None)
         table.add_column("Person", style="magenta", no_wrap=True)
-        table.add_column("Fil", style="cyan", no_wrap=True, overflow="ellipsis", max_width=50)
+        table.add_column("Fil", style="cyan", no_wrap=True, overflow="ellipsis")
         table.add_column("Status", style="bold", width=10)
         table.add_column("Anledning", style="dim")
+        
         for res in last_results[-MAX_LOG:]:
             clr = "green" if res['ok'] else "red"
             st = "✅ OK" if res['ok'] else "❌ FAIL"
             table.add_row(res['label'], Path(res['path']).name, Text(st, style=clr), res['reason'])
-        return table
+            
+        layout["progress_box"].update(Panel(progress, title="Framsteg", border_style="blue"))
+        layout["log_box"].update(Panel(table, title="Logg", border_style="white"))
+        
+        if args.visual:
+            # preview_content kan vara en Text eller sträng
+            content = preview_content if preview_content else ""
+            layout["visual"].update(Panel(Align.center(content), title="Face Preview", border_style="magenta"))
+        
+        if live_obj:
+            live_obj.refresh()
 
-    preview_content = ""
+    # Initial rendering innan vi börjar loopen
+    update_ui()
 
     with Live(layout, console=console, refresh_per_second=4, screen=False) as live:
         try:
             for path, label in todo:
+                # 1. Uppdatera UI direkt så vi ser VAD som börjar processas
+                update_ui(label, path, live_obj=live)
+                
                 ok = False
                 reason = "unknown"
-                face_crop_for_visual = None
-                
-                # Om vi vill ha visual, måste vi få tag i bildrutan. 
-                # Vi ändrar compute_embedding lite i framtiden eller gör det här.
-                # För nu: kör som vanligt.
+                preview_content = ""
                 
                 try:
-                    # En fuling för att få tag i bildrutan för visual mode
                     if args.visual:
                         img_rgb = load_image_rgb(path)
                         if img_rgb is not None:
-                            # Enkel detektion för preview
                             bgr = rgb_to_bgr(img_rgb)
                             faces = app.get(bgr)
                             if faces:
@@ -521,8 +545,9 @@ def run_encode_rich(todo, app, rec_model, conn, X, y, emb_path, args):
                                 x1, y1, x2, y2 = f.bbox.astype(int)
                                 h_img, w_img = bgr.shape[:2]
                                 x1, y1, x2, y2 = max(x1,0), max(y1,0), min(x2,w_img), min(y2,h_img)
-                                face_crop_for_visual = bgr[y1:y2, x1:x2]
-                                preview_content = render_face_preview(face_crop_for_visual)
+                                preview_content = render_face_preview(bgr[y1:y2, x1:x2])
+                                # Uppdatera igen med preview så den syns under compute_embedding
+                                update_ui(label, path, preview_content, live_obj=live)
 
                     emb, n, fb, reason = compute_embedding(
                         app, rec_model, path,
@@ -530,40 +555,22 @@ def run_encode_rich(todo, app, rec_model, conn, X, y, emb_path, args):
                         args.max_yaw,
                         args.min_det_score,
                         args.min_focus,
-                        verbose=False # Tvinga False i UI-mode
+                        verbose=False
                     )
                     ok = emb is not None
                     if ok:
                         X.append(emb)
                         y.append(label)
                 except Exception as e:
-                    reason = f"error: {str(e)[:30]}"
+                    reason = f"error: {str(e)[:40]}"
                 
                 processed_db.add_processed(conn, path, ok, reason)
                 last_results.append({'path': path, 'label': label, 'ok': ok, 'reason': reason})
                 
-                # Uppdatera UI
-                progress.update(task_id, advance=1, description=f"Handlägger: {label} / [bold]{Path(path).name}[/bold]")
-                
-                main_panel = Panel.fit(
-                    Layout(progress),
-                    title="ArcFace Pipeline",
-                    subtitle=f"Totalt: {len(X)} embeddings"
-                )
-                
-                # Vi bygger om layouten varje steg
-                log_table = get_log_table()
-                
-                # Skapa en layout-struktur för 'main'
-                main_layout = Layout()
-                main_layout.split_column(
-                    Layout(Align.center(Panel(progress, title="Framsteg")), size=5),
-                    Layout(Panel(log_table, title="Logg"))
-                )
-                
-                layout["main"].update(main_layout)
-                if args.visual:
-                    layout["visual"].update(Panel(Align.center(preview_content), title="Face Preview"))
+                # Uppdatera framstegspolen
+                progress.advance(task_id)
+                # Slutlig uppdatering för detta steg (visar logg-raden)
+                update_ui(label, path, preview_content, live_obj=live)
                 
                 if ok and len(X) % args.flush_every == 0:
                     save_embeddings(emb_path, X, y)
