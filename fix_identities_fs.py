@@ -3,6 +3,7 @@ import os
 import shutil
 import argparse
 import sqlite3
+import pickle
 from pathlib import Path
 from typing import Dict, List, Tuple
 from rich.console import Console
@@ -20,6 +21,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Rätta artistnamn på filsystemet och i databasen.")
     parser.add_argument("--data-root", required=True, type=Path, help="Rot-mapp för artister.")
     parser.add_argument("--db", required=True, type=Path, help="Sökväg till processed.db.")
+    parser.add_argument("--embeddings", type=Path, help="Valfri sökväg till embeddings_ppic.pkl för att uppdatera labels.")
     parser.add_argument("--apply", action="store_true", help="Utför faktiska ändringar (standard är Dry Run).")
     parser.add_argument("--merge-txt", default="merge.txt", type=Path)
     parser.add_argument("--exclusions-txt", default="similar_exclusions.txt", type=Path)
@@ -156,6 +158,31 @@ def main():
                 
                 console.print(f"  [green]Fixat:[/green] {old_name} -> {new_name} ({updated_count} poster uppdaterade)")
                 
+        # D. Update Embeddings if provided
+        if args.embeddings and args.embeddings.exists():
+            console.print(f"\n[yellow]Uppdaterar etiketter i [bold]{args.embeddings}[/bold]...[/yellow]")
+            with open(args.embeddings, "rb") as f:
+                data = pickle.load(f)
+            
+            X, y = data["X"], data["y"]
+            rename_map = {old: new for old, new, action in actions}
+            
+            changes = 0
+            new_y = []
+            for label in y:
+                if label in rename_map:
+                    new_y.append(rename_map[label])
+                    changes += 1
+                else:
+                    new_y.append(label)
+            
+            if changes > 0:
+                with open(args.embeddings, "wb") as f:
+                    pickle.dump({"X": X, "y": new_y}, f)
+                console.print(f"[green]✅ Uppdaterade {changes} etiketter i embeddings-filen.[/green]")
+            else:
+                console.print("[dim]Inga etiketter i embeddings-filen behövde uppdateras.[/dim]")
+
         console.print("\n[bold green]✅ Klart! Allt är rättat.[/bold green]")
     except Exception as e:
         console.print(f"\n[bold red]Ett fel uppstod: {e}[/bold red]")
