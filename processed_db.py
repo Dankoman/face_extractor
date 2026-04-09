@@ -174,13 +174,33 @@ def update_path(conn: sqlite3.Connection, old_path: str, new_path: str) -> bool:
 
 
 def update_paths_batch(conn: sqlite3.Connection, mapping: Dict[str, str]) -> int:
-    """Uppdatera flera paths baserat på {old_path: new_path}. Returnerar antal uppdaterade."""
+    """Uppdatera flera paths baserat na {old_path: new_path}. Returnerar antal uppdaterade."""
     if not mapping:
         return 0
     updated = 0
     for old, new in mapping.items():
         cur = conn.execute("UPDATE OR REPLACE processed SET path = ? WHERE path = ?", (new, old))
         updated += cur.rowcount
+    conn.commit()
+    return updated
+
+
+def update_directory_path(conn: sqlite3.Connection, old_dir: str, new_dir: str) -> int:
+    """Uppdatera alla stigar som börjar med old_dir till att börja med new_dir."""
+    # Se till att de slutar med slash för att undvika prefix-matchning på fel mappar
+    old_prefix = str(old_dir).rstrip("/") + "/"
+    new_prefix = str(new_dir).rstrip("/") + "/"
+    
+    # Hitta alla rader som matchar prefixet
+    cur = conn.execute("SELECT path FROM processed WHERE path LIKE ?", (old_prefix + "%",))
+    rows = cur.fetchall()
+    
+    updated = 0
+    for (old_path,) in rows:
+        new_path = old_path.replace(old_prefix, new_prefix, 1)
+        conn.execute("UPDATE OR REPLACE processed SET path = ? WHERE path = ?", (new_path, old_path))
+        updated += 1
+    
     conn.commit()
     return updated
 
