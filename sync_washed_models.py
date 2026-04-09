@@ -191,12 +191,15 @@ def sync_person(source_folder: Path, primary_name: str, dry_run: bool, force_wip
 
 def main():
     parser = argparse.ArgumentParser(description="Synka tvättade modeller från Innie till pBook")
+    parser.add_argument("source_dir", type=str, nargs="?", help="Källmapp (valfri positional)")
     parser.add_argument("--confirm", action="store_true", help="Genomför faktiska ändringar (utan denna körs dry-run)")
     parser.add_argument("--skip-analysis", action="store_true", help="Använd befintlig rapport istället för att köra ny analys")
-    parser.add_argument("--source", type=str, default=str(DEFAULT_SOURCE_DIR), help=f"Källmapp (standard: {DEFAULT_SOURCE_DIR})")
+    parser.add_argument("--source", type=str, help=f"Källmapp (standard: {DEFAULT_SOURCE_DIR})")
     args = parser.parse_args()
 
-    source_dir = Path(args.source)
+    # Prioritera positional argument om det finns, annars --source, annars default
+    source_raw = args.source_dir or args.source or str(DEFAULT_SOURCE_DIR)
+    source_dir = Path(source_raw)
 
     dry_run = not args.confirm
     if dry_run:

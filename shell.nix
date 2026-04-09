@@ -21,12 +21,28 @@ pkgs.mkShell {
     pkgs.tmux
     pkgs.byobu
     pkgs.chafa
+    pkgs.patchelf
   ];
 
   shellHook = ''
-    echo "✅ Nix-miljö laddad."
+    echo "✅ Nix-miljö laddad (med nix-ld support)."
 
-    export LD_LIBRARY_PATH="${pkgs.zlib}/lib:${pkgs.stdenv.cc.cc.lib}/lib:${pkgs.onnxruntime}/lib:${pkgs.opencv}/lib:$LD_LIBRARY_PATH"
+    export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath [
+      pkgs.stdenv.cc.cc
+      pkgs.zlib
+      pkgs.glib
+      pkgs.onnxruntime
+      pkgs.opencv
+      pkgs.dbus
+      pkgs.atk
+      pkgs.pango
+      pkgs.gtk3
+    ]}:''${LD_LIBRARY_PATH:-}"
+
+    # nix-ld support
+    export NIX_LD="${pkgs.stdenv.cc.libc}/lib/ld-linux-x86-64.so.2"
+    export NIX_LD_LIBRARY_PATH="$LD_LIBRARY_PATH"
+
     export STASH_URL="http://192.168.0.50:9999"
     export STASHDB_API_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiJlYjAzMzRkNi03NTQ4LTRhYjAtYjExMC0xOGEyZmI2Y2YwMDQiLCJzdWIiOiJBUElLZXkiLCJpYXQiOjE2NjM0NDg1MjZ9.ckvz_oNpI_HSCGSSOa1xI2mprnoDCBl7EuoBAXcK6Us"
     export STRICT_NAME_MATCH=1
