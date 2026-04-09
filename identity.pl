@@ -7,15 +7,19 @@
 :- dynamic primary/1.
 
 % alias(X, Y) is a symmetric linkage from merge.txt
+% "Om vi har länkat X till Y, eller Y till X, så är de alias."
 alias(X, Y) :- link(X, Y).
 alias(X, Y) :- link(Y, X).
 
 % same_person(X, Y) is the transitive closure of aliases
+% "Om X är alias med någon (Z), och den personen (Z) i sin tur är samma person som Y... då är X och Y samma person."
+% Detta sköter hela kedjan av alias automatiskt.
 same_person(X, X).
 same_person(X, Y) :- alias(X, Z), same_person(Z, Y).
 
 % external_truth(OriginalName, CanonicalName, Source)
-% Priorities: StashDB (1) > ThePornDB (2)
+% Priorities: StashDB (1) > ThePornDB (2) > PMVStash (3) > FansDB (4)
+% "Här sätter vi poäng för varje källa. Lägre poäng vinner vid en krock!"
 priority('StashDB', 1).
 priority('ThePornDB', 2).
 priority('PMVStash', 3).
