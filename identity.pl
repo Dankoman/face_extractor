@@ -58,3 +58,35 @@ conflict(X, Y) :-
 % Find all names in a group
 group_members(Representative, Members) :-
     setof(M, same_person(Representative, M), Members).
+
+% --- Scraping Policy ---
+
+% Decisions based on metrics: Samples (S), Intra-Variance (V)
+% action(Action, Reason)
+
+% Rule 1: High variance indicates mixed identities.
+% We should probably NOT scrape more until it's cleaned, 
+% but for now we'll label it as 'mixed' so the scraper can choose.
+scrape_action(_S, V, mixed, 'Hög varians tyder på blandade identiteter') :- 
+    V > 0.3.
+
+% Rule 2: Low samples. Definitely scrape.
+scrape_action(S, V, scrape, 'För få bilder') :- 
+    S < 15,
+    V =< 0.3.
+
+% Rule 3: Moderate variance but okay samples. Needs check.
+scrape_action(S, V, check, 'Osäker identitet (medelhög varians)') :- 
+    V > 0.2, V =< 0.3,
+    S >= 15.
+
+% Rule 4: Well trained.
+scrape_action(S, V, none, 'Vältränad') :- 
+    S >= 15,
+    V =< 0.2.
+
+% Wrapper for the Python resolver to get a consolidated decision
+scraping_decision(Name, S, V, FinalName, Action, Reason) :-
+    resolved_canonical(Name, FinalName),
+    (scrape_action(S, V, Action, Reason) ; (Action = none, Reason = 'Ingen åtgärd krävs')).
+

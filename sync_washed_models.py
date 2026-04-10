@@ -9,8 +9,8 @@ from pathlib import Path
 from typing import Dict, Set, Tuple
 
 from PIL import Image
+from identity_resolver import IdentityResolver
 
-# Standardinställningar
 # Standardinställningar
 DEFAULT_SOURCE_DIR = Path("/home/marqs/Bilder/Innie")
 PBOOK_DIR = Path("/home/marqs/Bilder/pBook")
@@ -23,23 +23,7 @@ EMB_PATH = Path("/home/marqs/Programmering/Python/3.11/face_extractor/arcface_wo
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".JPG", ".JPEG"}
 
 
-def load_merge_map(path: Path) -> Dict[str, str]:
-    """Läs merge.txt och skapa Alias -> Huvudnamn mappning."""
-    merge_map = {}
-    if not path.exists():
-        print(f"⚠️ Varning: {path} hittades inte.")
-        return merge_map
-
-    with path.open("r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line or "|" not in line:
-                continue
-            parts = [p.strip() for p in line.split("|")]
-            primary = parts[0]
-            for alias in parts:
-                merge_map[alias] = primary
-    return merge_map
+SIMILAR_EXCLUSIONS = Path("/home/marqs/Programmering/Python/3.11/face_extractor/similar_exclusions.txt")
 
 
 def parse_report(report_file: str) -> Tuple[Set[str], Set[str]]:
@@ -65,9 +49,9 @@ def parse_report(report_file: str) -> Tuple[Set[str], Set[str]]:
                 if p_b:
                     flagged.add(p_b)
                     if should_wipe(i_b): wipe_candidates.add(p_b)
-        print(f"✅ Analys-rapport inläst. {len(flagged)} flaggade (varav {len(wipe_candidates)} rensas helt).")
+        print(f"✅ Analys-rapport inläst. {len(flagged)} flaggade (varav {len(wipe_candidates)} rensas helt).", flush=True)
     else:
-        print(f"⚠️ Rapportfil {report_file} saknas.")
+        print(f"⚠️ Rapportfil {report_file} saknas.", flush=True)
     return flagged, wipe_candidates
 
 
@@ -83,12 +67,12 @@ def run_analysis(report_file: str) -> None:
         "--ignore", str(UNCERTAINTY_SCRIPT.parent / "uncertainty_exceptions.txt")
     ]
     
-    print(f"🔍 Kör analys: {' '.join(cmd)}...")
+    print(f"🔍 Kör analys: {' '.join(cmd)}...", flush=True)
     try:
         subprocess.run(cmd, check=True)
     except subprocess.CalledProcessError as e:
-        print(f"❌ Analysen misslyckades kapitalt: {e}")
-        print("⚠️ Avbryter synk för att inte missa flaggade mappar pga miljöfel.")
+        print(f"❌ Analysen misslyckades kapitalt: {e}", flush=True)
+        print("⚠️ Avbryter synk för att inte missa flaggade mappar pga miljöfel.", flush=True)
         exit(1)
 
 
@@ -102,11 +86,12 @@ def create_btrfs_snapshot(source: Path, target_base: Path, name: str, dry_run: b
     
     if not dry_run:
         snapshot_dir.parent.mkdir(parents=True, exist_ok=True)
-        print(f"📸 Skapar snapshot: {source} -> {snapshot_dir}")
+        print(f"📸 Skapar snapshot: {source} -> {snapshot_dir}...", end="", flush=True)
         # Använd cp --reflink=always för btrfs-magi
         subprocess.run(["cp", "--reflink=always", "-r", str(source), str(snapshot_dir)], check=True)
+        print(" Klart!", flush=True)
     else:
-        print(f"DRY-RUN: Skulle skapat snapshot av {source} i {snapshot_dir}")
+        print(f"DRY-RUN: Skulle skapat snapshot av {source} i {snapshot_dir}", flush=True)
 
 
 def get_image_count(directory: Path) -> int:
@@ -135,29 +120,29 @@ def sync_person(source_folder: Path, primary_name: str, dry_run: bool, force_wip
         
         if should_wipe_all:
             if not dry_run:
-                print(f"🧹 Rensar ALLA ({len(existing_images)}) bilder i {target_dir} (Fullständig tvätt)...")
+                print(f"🧹 Rensar ALLA ({len(existing_images)}) bilder i {target_dir} (Fullständig tvätt)...", flush=True)
                 for img in existing_images:
                     img.unlink()
             else:
-                print(f"DRY-RUN: Skulle ha rensat ALLA {len(existing_images)} bilder i {target_dir}")
+                print(f"DRY-RUN: Skulle ha rensat ALLA {len(existing_images)} bilder i {target_dir}", flush=True)
         else:
             # MERGE-läge: Vi vill att mappen ska växa.
             # Vi rensar ändå bort småfiler (skräp) för att höja kvaliteten.
             if small_images:
                 if not dry_run:
-                    print(f"🧹 Kvalitetsrens: Tar bort {len(small_images)} småbilder (<=100KB) i {target_dir}.")
+                    print(f"🧹 Kvalitetsrens: Tar bort {len(small_images)} småbilder (<=100KB) i {target_dir}.", flush=True)
                     for img in small_images:
                         img.unlink()
                 else:
-                    print(f"DRY-RUN: Skulle ha rensat {len(small_images)} småbilder i {target_dir}")
+                    print(f"DRY-RUN: Skulle ha rensat {len(small_images)} småbilder i {target_dir}", flush=True)
             
-            print(f"ℹ️ Mergar in {len(new_images)} bilder från källmappen till {len(existing_images) - len(small_images)} befintliga stora bilder i pBook.")
+            print(f"ℹ️ Mergar in {len(new_images)} bilder från källmappen till {len(existing_images) - len(small_images)} befintliga stora bilder i pBook.", flush=True)
     else:
         if not dry_run:
             target_dir.mkdir(parents=True, exist_ok=True)
-            print(f"📂 Skapar ny mapp: {target_dir}")
+            print(f"📂 Skapar ny mapp: {target_dir}", flush=True)
         else:
-            print(f"DRY-RUN: Skulle skapat mapp {target_dir}")
+            print(f"DRY-RUN: Skulle skapat mapp {target_dir}", flush=True)
 
     # 3. Konvertera och flytta de nya bilderna
     for f in sorted(new_images):
@@ -193,6 +178,7 @@ def main():
     parser = argparse.ArgumentParser(description="Synka tvättade modeller från Innie till pBook")
     parser.add_argument("source_dir", type=str, nargs="?", help="Källmapp (valfri positional)")
     parser.add_argument("--confirm", action="store_true", help="Genomför faktiska ändringar (utan denna körs dry-run)")
+    parser.add_argument("--all", action="store_true", help="Synka ALLA mappar oavsett om de är flaggade eller inte")
     parser.add_argument("--skip-analysis", action="store_true", help="Använd befintlig rapport istället för att köra ny analys")
     parser.add_argument("--source", type=str, help=f"Källmapp (standard: {DEFAULT_SOURCE_DIR})")
     args = parser.parse_args()
@@ -206,7 +192,7 @@ def main():
         print("🚀 KÖR I DRY-RUN LÄGE (inga filer ändras)")
         print("Använd --confirm för att faktiskt flytta filer.\n")
 
-    merge_map = load_merge_map(MERGE_FILE)
+    resolver = IdentityResolver(MERGE_FILE, SIMILAR_EXCLUSIONS)
     
     report_file = "sync_pipeline_report.csv"
     if not args.skip_analysis:
@@ -224,10 +210,10 @@ def main():
     
     for folder in source_folders:
         name = folder.name
-        primary = merge_map.get(name, name)
+        primary = resolver.resolve(name)
         dest_path = PBOOK_DIR / primary
         
-        # Filter-logik Version 3
+        # Filter-logik Version 4
         is_flagged = (name in flagged_names) or (primary in flagged_names)
         is_wipe = (name in wipe_candidates) or (primary in wipe_candidates)
         is_new = not dest_path.exists()
@@ -236,20 +222,22 @@ def main():
         pbook_count = get_image_count(dest_path)
         is_small = (not is_new) and (pbook_count < 10)
         
-        if is_flagged or is_new or is_small:
+        # Synka om: Flaggad, Ny, Liten ELLER om --all är satt
+        if args.all or is_flagged or is_new or is_small:
             reason = []
+            if args.all: reason.append("FORCE ALL")
             if is_wipe: reason.append("FULL WIPE")
             elif is_flagged: reason.append("FLAGGAD")
             if is_new: reason.append("NY")
             if is_small: reason.append(f"LITEN ({pbook_count} bilder)")
             
-            print(f"\n📦 Bearbetar {name} -> {primary} ({', '.join(reason)})")
+            print(f"\n📦 Bearbetar {name} -> {primary} ({', '.join(reason)})", flush=True)
             sync_person(folder, primary, dry_run, force_wipe=is_wipe)
 
     if dry_run:
-        print("\n✨ Dry-run klar. Ingen skada skedd.")
+        print("\n✨ Dry-run klar. Ingen skada skedd.", flush=True)
     else:
-        print("\n✨ Synk klar!")
+        print("\n✨ Synk klar!", flush=True)
 
     if dry_run:
         print("\n✨ Dry-run klar. Ingen skada skedd.")

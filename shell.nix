@@ -4,7 +4,6 @@ let
   py = pkgs.python311;
   pyPkgs = py.withPackages (ps: with ps; [
     pip setuptools wheel
-    numpy scipy scikit-learn tqdm pillow
   ]);
 in
 pkgs.mkShell {
@@ -47,24 +46,32 @@ pkgs.mkShell {
 
     export STASHDB_API_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiJlYjAzMzRkNi03NTQ4LTRhYjAtYjExMC0xOGEyZmI2Y2YwMDQiLCJzdWIiOiJBUElLZXkiLCJpYXQiOjE2NjM0NDg1MjZ9.ckvz_oNpI_HSCGSSOa1xI2mprnoDCBl7EuoBAXcK6Us"
     export TPDB_API_KEY="uBNsAhIe9evycv8q10x1wkRlEzFtFmYUTimvll0416e2b867"
-    export PMVSTASH_API_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiIzMDY5MmNmNS0yMjlmLTRiY2YtOTlkNi0xZWY5NDRkZjlhZjIiLCJzdWIiOiJBUElLZXkiLCJpYXQiOjE2OTU3MTk4MzZ9.7xFdhw7sRUfeOOUL3evpnhX0j5NmP4SAj4MOO7WzhN4"
+    export PMVSTASH_API_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiIzMDY5MmNmNS0yMjlmLTRiY2YtOTlkNi0xZWY5NDRkZjlhZjIiLCJzdWIiOiJBUElLZXkiLCJpYXQiOjE3MDgwODQ2MjB9.7xFdhw7sRUfeOOUL3evpnhX0j5NmP4SAj4MOO7WzhN4"
     export FANSDB_API_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiI5YWE1NjNmOS04ZjkyLTRlOTgtYTg3MC0wNWYzNDIzZmQwZWYiLCJzdWIiOiJBUElLZXkiLCJpYXQiOjE3MDgwODQ2MjB9.dyrsw96W41h3M2VFX37rpxcJUkpHg21iF2KGFmOSWsU"
     export STRICT_NAME_MATCH=1
     export FACE_EXTRACTOR_FEMALE_THRESHOLD="0.3"
 
-
-    if [ ! -d .venv ]; then
-      python3 -m venv .venv
-    fi
-    source .venv/bin/activate
-
-    if [ -z "$SKIP_PIP" ]; then
-      pip install --upgrade pip
-      pip install --no-cache-dir onnxruntime insightface opencv-python-headless==4.12.0.88 numpy flask flask-cors rich pyswip
-    fi
+    VENV_PYTHON="./.venv/bin/python3"
+    SYS_PYTHON_VER=$(python3 --version)
     
-    if [ -z "$SKIP_API" ]; then
-      python api_endpoint.py
+    # Smart check: Re-run setup only if venv is missing or python version changed
+    NEED_SETUP=0
+    if [ ! -d .venv ]; then
+      NEED_SETUP=1
+    elif [ "$($VENV_PYTHON --version 2>/dev/null)" != "$SYS_PYTHON_VER" ]; then
+      echo "⚠️ Python har uppdaterats i NixOS. Rensar och bygger om .venv..."
+      rm -rf .venv
+      NEED_SETUP=1
+    fi
+
+    if [ "$NEED_SETUP" -eq 1 ]; then
+      python3 -m venv .venv
+      source .venv/bin/activate
+      pip install --upgrade pip
+      pip install --no-cache-dir onnxruntime insightface opencv-python-headless==4.12.0.88 numpy scipy scikit-learn scikit-image tqdm pillow flask flask-cors rich pyswip albumentations
+      touch .venv/setup_complete
+    else
+      source .venv/bin/activate
     fi
   '';
 }

@@ -17,6 +17,7 @@ import concurrent.futures
 import multiprocessing
 
 import processed_db
+from identity_resolver import IdentityResolver
 
 
 # load_alias_map ersatt av processed_db.get_alias_map()
@@ -376,23 +377,28 @@ def main() -> None:
 
     print("Laddar databas...")
     conn = processed_db.open_db(Path(args.db))
-    print("Laddar alias-mappning...")
-    alias_map = processed_db.get_alias_map(conn)
-    print(f"  {len(alias_map)} alias-mappningar")
+    print("Laddar alias-mappning via Prolog (IdentityResolver)...")
+    resolver = IdentityResolver(Path("merge.txt"), Path("similar_exclusions.txt"))
 
     print("Laddar embeddings...")
     X, y = load_embeddings(Path(args.embeddings))
     # Upplös alias till primärnamn
+    print(f"  Upplöser {len(set(y))} unika namn via Prolog...")
+    alias_map = resolver.resolve_many(list(set(y)))
     y = [alias_map.get(label, label) for label in y]
-    print(f"  {len(X)} embeddings, {len(set(y))} unika personer (efter alias-upplösning)")
+    print(f"  {len(X)} embeddings, {len(set(y))} unika personer")
 
     print("Laddar processed-statistik...")
     proc_stats = processed_db.get_stats_by_person(conn)
     conn.close()
     # Upplös alias i processed-stats också
+    print("  Upplöser namn i statistik...")
     resolved_stats: Dict[str, Dict] = defaultdict(lambda: {"total": 0, "ok": 0, "fail": 0, "reasons": defaultdict(int)})
+    stat_names = list(proc_stats.keys())
+    alias_map_stats = resolver.resolve_many(stat_names)
+    
     for person, ps in proc_stats.items():
-        primary = alias_map.get(person, person)
+        primary = alias_map_stats.get(person, person)
         resolved_stats[primary]["total"] += ps["total"]
         resolved_stats[primary]["ok"] += ps["ok"]
         resolved_stats[primary]["fail"] += ps["fail"]
