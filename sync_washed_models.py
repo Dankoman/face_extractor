@@ -55,14 +55,14 @@ def parse_report(report_file: str) -> Tuple[Set[str], Set[str]]:
     return flagged, wipe_candidates
 
 
-def run_analysis(report_file: str) -> None:
+def run_analysis(report_file: str, top: int) -> None:
     """Kör model_uncertainty.py och generera rapport."""
     cmd = [
         "python3", str(UNCERTAINTY_SCRIPT),
         "--db", str(DB_PATH),
         "--embeddings", str(EMB_PATH),
         "--output", report_file,
-        "--top", "1000",
+        "--top", str(top),
         "--exclusions", str(UNCERTAINTY_SCRIPT.parent / "similar_exclusions.txt"),
         "--ignore", str(UNCERTAINTY_SCRIPT.parent / "uncertainty_exceptions.txt")
     ]
@@ -181,6 +181,8 @@ def main():
     parser.add_argument("--all", action="store_true", help="Synka ALLA mappar oavsett om de är flaggade eller inte")
     parser.add_argument("--skip-analysis", action="store_true", help="Använd befintlig rapport istället för att köra ny analys")
     parser.add_argument("--source", type=str, help=f"Källmapp (standard: {DEFAULT_SOURCE_DIR})")
+    parser.add_argument("--top", type=int, default=800, help="Antal modeller i analysen (standard: 800)")
+    parser.add_argument("--min-samples", type=int, default=5, help="Gräns för vad som räknas som 'liten' mapp (standard: 5)")
     args = parser.parse_args()
 
     # Prioritera positional argument om det finns, annars --source, annars default
@@ -196,7 +198,7 @@ def main():
     
     report_file = "sync_pipeline_report.csv"
     if not args.skip_analysis:
-        run_analysis(report_file)
+        run_analysis(report_file, args.top)
     else:
         print("⏭️ Hoppar över ny analys.")
 
@@ -218,18 +220,24 @@ def main():
         is_wipe = (name in wipe_candidates) or (primary in wipe_candidates)
         is_new = not dest_path.exists()
         
-        # Kolla om mappen är liten (färre än 10 bilder)
+        # Kolla om mappen är liten (färre än args.min_samples bilder)
         pbook_count = get_image_count(dest_path)
-        is_small = (not is_new) and (pbook_count < 10)
+        is_small = (not is_new) and (pbook_count < args.min_samples)
         
-        # Synka om: Flaggad, Ny, Liten ELLER om --all är satt
-        if args.all or is_flagged or is_new or is_small:
+        # Har skrapan faktiskt laddat ner något hit nyligen?
+        new_count = get_image_count(folder)
+        has_new_images = (new_count > 0)
+        
+        # Synka om: Flaggad, Ny, Liten, Har nya bilder, ELLER om --all är satt
+        if args.all or is_flagged or is_new or is_small or has_new_images:
             reason = []
             if args.all: reason.append("FORCE ALL")
             if is_wipe: reason.append("FULL WIPE")
             elif is_flagged: reason.append("FLAGGAD")
             if is_new: reason.append("NY")
             if is_small: reason.append(f"LITEN ({pbook_count} bilder)")
+            if has_new_images and not (args.all or is_flagged or is_new or is_small): 
+                reason.append(f"HAR NYA BILDER ({new_count})")
             
             print(f"\n📦 Bearbetar {name} -> {primary} ({', '.join(reason)})", flush=True)
             sync_person(folder, primary, dry_run, force_wipe=is_wipe)

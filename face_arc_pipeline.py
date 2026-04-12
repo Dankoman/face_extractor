@@ -66,6 +66,7 @@ UPSAMPLE_TARGET_MIN = 180   # minsta sida efter upsampling-försök
 K_DEFAULT           = 3
 MIN_PER_CLASS_DEF   = 2
 MAX_ABS_YAW_DEFAULT = 35.0  # max absolut yaw-vinkel (grader) innan vi skippar bilden
+MAX_ABS_PITCH_DEFAULT = 45.0 # max absolut pitch-vinkel (grader)
 MIN_DET_SCORE_DEFAULT = 0.25  # lägsta detektor-score vi accepterar
 MIN_FOCUS_DEFAULT   = 150.0   # lägsta Laplacian-variance för att inte klassas som suddig
 MODEL_3D_5POINTS = np.array(
@@ -90,6 +91,14 @@ FEMALE_THRESH = 0.0
 # ---------------------------------------------
 
 # -------------- Hjälpfunktioner --------------
+
+def normalize_angle(a: float) -> float:
+    """Normalisera en vinkel till intervallet [-90, 90] genom att hantera 180-graders speglingar."""
+    a = a % 360
+    if a > 180: a -= 360
+    if a > 90: a = 180 - a
+    elif a < -90: a = -180 - a
+    return a
 
 class ProcessingSpeedColumn(ProgressColumn):
     def render(self, task):
@@ -174,12 +183,12 @@ def get_embedding_direct(rec_model, img_rgb: np.ndarray) -> Optional[np.ndarray]
     return emb.astype(np.float32)
 
 
-def estimate_yaw_from_kps(kps: Optional[np.ndarray], width: int, height: int) -> Optional[float]:
+def estimate_pose_from_kps(kps: Optional[np.ndarray], width: int, height: int) -> Tuple[Optional[float], Optional[float]]:
     if kps is None or len(kps) < 5:
-        return None
+        return None, None
     focal = float(max(width, height))
     if focal <= 0:
-        return None
+        return None, None
     image_points = np.array(kps, dtype=np.float32)
     center = np.array([width / 2.0, height / 2.0], dtype=np.float32)
     camera_matrix = np.array(
@@ -200,21 +209,26 @@ def estimate_yaw_from_kps(kps: Optional[np.ndarray], width: int, height: int) ->
             flags=cv2.SOLVEPNP_EPNP,
         )
     except cv2.error:
-        return None
+        return None, None
     if not success:
-        return None
+        return None, None
     rot_mat, _ = cv2.Rodrigues(rotation_vec)
     proj = np.hstack((rot_mat, translation_vec))
     try:
         *_unused, euler_angles = cv2.decomposeProjectionMatrix(proj)
     except cv2.error:
-        return None
-    # euler_angles är (3,1); välj elementet explicit för att undvika NumPy-scalar warning
-    if euler_angles is not None and euler_angles.size >= 2:
-        yaw = float(euler_angles[1, 0])
+        return None, None
+
+    # euler_angles är (3,1); välj elementet explicit
+    if euler_angles is not None and euler_angles.size >= 3:
+        pitch_raw = float(euler_angles[0, 0])
+        yaw_raw = float(euler_angles[1, 0])
+        pitch = normalize_angle(pitch_raw)
+        yaw = normalize_angle(yaw_raw)
     else:
+        pitch = None
         yaw = None
-    return yaw
+    return pitch, yaw
 
 def render_face_preview(face_crop_bgr, width=60, height=30):
     """Renderar en ANSI-preview av ansiktet med högre upplösning."""
@@ -273,6 +287,7 @@ def compute_embedding(app: FaceAnalysis,
                       allow_fallback: bool,
                       allow_upsample: bool,
                       max_abs_yaw: Optional[float],
+                      max_abs_pitch: Optional[float],
                       min_det_score: Optional[float],
                       min_focus: Optional[float],
                       verbose: bool = False) -> tuple[Optional[np.ndarray], int, bool, str]:
@@ -342,27 +357,33 @@ def compute_embedding(app: FaceAnalysis,
         log(f"rejecting due to det_score {det_score:.3f} < {min_det_score:.3f}")
         return None, 1, False, "low_det_score"
 
-    if max_abs_yaw is not None:
+    if max_abs_yaw is not None or max_abs_pitch is not None:
         pose = getattr(face, "pose", None)
         yaw = None
+        pitch = None
         if pose is not None and len(pose) >= 2:
-            yaw = float(pose[1])
-            log(f"pose yaw={yaw:.1f}\u00b0")
-        if yaw is None:
+            pitch = normalize_angle(float(pose[0]))
+            yaw = normalize_angle(float(pose[1]))
+            log(f"pose pitch={pitch:.1f}\u00b0, yaw={yaw:.1f}\u00b0")
+        if yaw is None or pitch is None:
             kps = getattr(face, "kps", None)
             if kps is not None:
-                yaw = estimate_yaw_from_kps(kps, w_det, h_det)
-                if yaw is not None:
-                    log(f"estimated yaw from landmarks={yaw:.1f}\u00b0")
+                pitch, yaw = estimate_pose_from_kps(kps, w_det, h_det)
+                if yaw is not None and pitch is not None:
+                    log(f"estimated pitch={pitch:.1f}\u00b0, yaw={yaw:.1f}\u00b0 from landmarks")
                 else:
-                    log("failed to estimate yaw from landmarks")
+                    log("failed to estimate pose from landmarks")
             else:
-                log("no landmarks available for yaw estimation")
-        if yaw is None:
-            log("pose information missing; cannot apply yaw filter")
-        elif abs(yaw) > max_abs_yaw:
-            log(f"rejecting due to |yaw|={abs(yaw):.1f}\u00b0 > {max_abs_yaw}\u00b0")
-            return None, 1, False, "high_yaw"
+                log("no landmarks available for pose estimation")
+        if yaw is None or pitch is None:
+            log("pose information missing; cannot apply pose filters")
+        else:
+            if max_abs_yaw is not None and abs(yaw) > max_abs_yaw:
+                log(f"rejecting due to |yaw|={abs(yaw):.1f}\u00b0 > {max_abs_yaw}\u00b0")
+                return None, 1, False, "high_yaw"
+            if max_abs_pitch is not None and abs(pitch) > max_abs_pitch:
+                log(f"rejecting due to |pitch|={abs(pitch):.1f}\u00b0 > {max_abs_pitch}\u00b0")
+                return None, 1, False, "high_pitch"
     x1, y1, x2, y2 = face.bbox.astype(int)
     x1, y1, x2, y2 = max(x1, 0), max(y1, 0), min(x2, w_det), min(y2, h_det)
     if x2 <= x1 or y2 <= y1:
@@ -442,6 +463,7 @@ def run_encode_tqdm(todo, app, rec_model, conn, X, y, emb_path, args):
                     app, rec_model, path,
                     args.allow_fallback, args.allow_upsample,
                     args.max_yaw,
+                    args.max_pitch,
                     args.min_det_score,
                     args.min_focus,
                     verbose=args.verbose
@@ -553,6 +575,7 @@ def run_encode_rich(todo, app, rec_model, conn, X, y, emb_path, args):
                         app, rec_model, path,
                         args.allow_fallback, args.allow_upsample,
                         args.max_yaw,
+                        args.max_pitch,
                         args.min_det_score,
                         args.min_focus,
                         verbose=False
@@ -643,6 +666,12 @@ def main():
         help="Max absolut yaw-vinkel (grader) som accepteras; sätt <=0 för att stänga av filtret",
     )
     ap.add_argument(
+        "--max-pitch",
+        type=float,
+        default=MAX_ABS_PITCH_DEFAULT,
+        help="Max absolut pitch-vinkel (grader) som accepteras; sätt <=0 för att stänga av filtret",
+    )
+    ap.add_argument(
         "--min-det-score",
         type=float,
         default=MIN_DET_SCORE_DEFAULT,
@@ -658,6 +687,8 @@ def main():
     args=ap.parse_args();EMB_PKL=args.embeddings
     if args.max_yaw is not None and args.max_yaw <= 0:
         args.max_yaw = None
+    if args.max_pitch is not None and args.max_pitch <= 0:
+        args.max_pitch = None
     if args.min_det_score is not None and args.min_det_score <= 0:
         args.min_det_score = None
     if args.min_focus is not None and args.min_focus <= 0:
