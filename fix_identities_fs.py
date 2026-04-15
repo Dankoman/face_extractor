@@ -25,6 +25,8 @@ def parse_args():
     parser.add_argument("--apply", action="store_true", help="Utför faktiska ändringar (standard är Dry Run).")
     parser.add_argument("--merge-txt", default="merge.txt", type=Path)
     parser.add_argument("--exclusions-txt", default="similar_exclusions.txt", type=Path)
+    parser.add_argument("--yes", action="store_true", help="Svara ja på alla bekräftelser (för automatisering).")
+    parser.add_argument("--only-new", action="store_true", help="Kolla ENDAST mappar som inte redan existerar i processed.db")
     return parser.parse_args()
 
 def backup_db(db_path: Path):
@@ -83,6 +85,21 @@ def main():
     console.print("[bold blue]Skannar mappar och hämtar data från StashDB/TPDB...[/bold blue]")
     performer_dirs = [d for d in data_root.iterdir() if d.is_dir() and not d.name.startswith(".")]
     
+    if args.only_new:
+        conn = processed_db.open_db(db_path)
+        existing_people = set()
+        for p, _, _ in processed_db.iter_all(conn):
+            existing_people.add(Path(p).parent.name)
+        conn.close()
+        
+        filtered_dirs = [d for d in performer_dirs if d.name not in existing_people]
+        console.print(f"[dim]Hittade {len(existing_people)} redan kända personer. Filtrerade ner mappar från {len(performer_dirs)} till {len(filtered_dirs)} nya mappar.[/dim]")
+        performer_dirs = filtered_dirs
+
+    if not performer_dirs:
+        console.print("[green]✅ Inga mappar att granska![/green]")
+        return
+    
     with Progress() as progress:
         task = progress.add_task("[cyan]Beräknar rättningar...", total=len(performer_dirs))
         for d in performer_dirs:
@@ -131,7 +148,7 @@ def main():
         return
 
     # 5. Utför ändringar
-    if not Confirm.ask(f"Är du säker på att du vill utföra {len(actions)} ändringar?"):
+    if not args.yes and not Confirm.ask(f"Är du säker på att du vill utföra {len(actions)} ändringar?"):
         return
 
     backup_db(db_path)

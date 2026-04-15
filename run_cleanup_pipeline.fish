@@ -44,6 +44,7 @@ function run_step_if_exists
     end
 end
 
+run_step "[0/8] Resolve External Identities (Prolog/API)" $PYTHON fix_identities_fs.py --data-root $DATA_ROOT --db $PROCESSED_DB --embeddings $EMBEDDINGS_PKL --apply --yes --only-new
 run_step "[1/8] Detect removed images" $PYTHON detect_removed.py \
     --data-root $DATA_ROOT --embeddings $EMBEDDINGS_PKL --db $PROCESSED_DB
 run_step "[2/8] Apply merge candidates" $PYTHON apply_merge_candidates.py --db $PROCESSED_DB --candidates "$script_dir/to_be_merged.csv"

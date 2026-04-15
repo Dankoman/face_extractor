@@ -16,6 +16,8 @@ import sys
 import pickle
 import argparse
 import math
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning)
 from pathlib import Path
 from typing import List, Tuple, Optional, Dict, Set
 

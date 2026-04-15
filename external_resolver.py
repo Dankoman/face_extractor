@@ -20,6 +20,7 @@ class ExternalIdentityResolver:
         self.fansdb_key = fansdb_key or os.environ.get("FANSDB_API_KEY")
         self._init_db()
         self.session = requests.Session()
+        self.broken_endpoints = set()
 
     def _init_db(self):
         with sqlite3.connect(CACHE_DB) as conn:
@@ -66,7 +67,7 @@ class ExternalIdentityResolver:
         ]
 
         for key, endpoint, source_name in sources:
-            if not key:
+            if not key or source_name in self.broken_endpoints:
                 continue
             
             res = None
@@ -117,6 +118,12 @@ class ExternalIdentityResolver:
                         if alias.lower() == lname:
                             return p_name
             except Exception as e:
+                err_str = str(e)
+                if "500 Server Error" in err_str or "502 Server Error" in err_str or "503 Server Error" in err_str:
+                    print(f"\n⚠️ {source_label} verkar vara nere ({err_str[:15]}). Inaktiverar denna källa för resten av körningen.", flush=True)
+                    self.broken_endpoints.add(source_label)
+                    return None
+                
                 print(f"{source_label} error for {name} ({field}): {e}")
                 continue
         return None

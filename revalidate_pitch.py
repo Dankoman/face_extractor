@@ -4,6 +4,8 @@ import argparse
 import pickle
 import numpy as np
 import json
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning)
 from pathlib import Path
 from tqdm.auto import tqdm
 
@@ -61,7 +63,7 @@ def main():
     if not person_paths:
         print("✅ Alla personer är redan kontrollerade!")
         conn.close()
-        return
+        sys.exit(2)
 
     # Välj ut vår batch för körningen
     people_to_process = list(person_paths.keys())[:args.batch_size]

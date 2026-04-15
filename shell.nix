@@ -68,7 +68,7 @@ pkgs.mkShell {
       python3 -m venv .venv
       source .venv/bin/activate
       pip install --upgrade pip
-      pip install --no-cache-dir onnxruntime insightface opencv-python-headless==4.12.0.88 numpy scipy scikit-learn scikit-image tqdm pillow flask flask-cors rich pyswip albumentations
+      pip install --no-cache-dir onnxruntime insightface opencv-python-headless==4.12.0.88 numpy scipy scikit-learn scikit-image tqdm pillow flask flask-cors rich pyswip albumentations requests
       touch .venv/setup_complete
     else
       source .venv/bin/activate
