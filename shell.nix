@@ -53,23 +53,32 @@ pkgs.mkShell {
 
     VENV_PYTHON="./.venv/bin/python3"
     SYS_PYTHON_VER=$(python3 --version)
+    PIP_PKGS="onnxruntime insightface opencv-python-headless==4.12.0.88 numpy scipy scikit-learn scikit-image tqdm pillow flask flask-cors rich pyswip albumentations requests packaging"
+    PIP_PKGS_HASH=$(echo "$PIP_PKGS" | sha256sum | cut -d' ' -f1)
     
-    # Smart check: Re-run setup only if venv is missing or python version changed
+    # Smart check: Re-run setup if venv missing, python changed, or dependencies changed
     NEED_SETUP=0
     if [ ! -d .venv ]; then
       NEED_SETUP=1
     elif [ "$($VENV_PYTHON --version 2>/dev/null)" != "$SYS_PYTHON_VER" ]; then
-      echo "⚠️ Python har uppdaterats i NixOS. Rensar och bygger om .venv..."
+      echo "⚠️ Python version mismatch. Rebuilding .venv..."
       rm -rf .venv
       NEED_SETUP=1
+    elif [ ! -f .venv/deps_hash ] || [ "$(cat .venv/deps_hash)" != "$PIP_PKGS_HASH" ]; then
+      echo "🔄 Dependencies changed. Syncing .venv..."
+      NEED_SETUP=2
     fi
 
     if [ "$NEED_SETUP" -eq 1 ]; then
       python3 -m venv .venv
       source .venv/bin/activate
       pip install --upgrade pip
-      pip install --no-cache-dir onnxruntime insightface opencv-python-headless==4.12.0.88 numpy scipy scikit-learn scikit-image tqdm pillow flask flask-cors rich pyswip albumentations requests
-      touch .venv/setup_complete
+      pip install --no-cache-dir $PIP_PKGS
+      echo "$PIP_PKGS_HASH" > .venv/deps_hash
+    elif [ "$NEED_SETUP" -eq 2 ]; then
+      source .venv/bin/activate
+      pip install --no-cache-dir $PIP_PKGS
+      echo "$PIP_PKGS_HASH" > .venv/deps_hash
     else
       source .venv/bin/activate
     fi
