@@ -5,6 +5,7 @@
 :- dynamic external_truth/3.
 :- dynamic exclude/2.
 :- dynamic primary/1.
+:- dynamic similar/3.
 
 % alias(X, Y) is a symmetric linkage from merge.txt
 % "Om vi har länkat X till Y, eller Y till X, så är de alias."
@@ -58,6 +59,20 @@ conflict(X, Y) :-
 % Find all names in a group
 group_members(Representative, Members) :-
     setof(M, same_person(Representative, M), Members).
+
+% --- Auto Merge Logic ---
+% Suggest a merge if two people are similar AND share the same external canonical identity
+suggest_merge(A, B, Canonical, Reason) :-
+    similar(A, B, Sim),
+    Sim >= 0.4,
+    \+ same_person(A, B), % Don't suggest if already merged
+    \+ conflict(A, B),    % Don't suggest if explicitly excluded
+    best_external_canonical(A, Canonical, _),
+    best_external_canonical(B, Canonical, _),
+    atomic_list_concat(['Båda matchar ', Canonical, ' i extern databas (sim: ', Sim, ')'], Reason).
+
+% We can also add other rules here later, e.g., if Sim > 0.8 and name is a substring.
+
 
 % --- Scraping Policy ---
 

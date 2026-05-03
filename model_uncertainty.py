@@ -378,7 +378,7 @@ def main() -> None:
     print("Laddar databas...")
     conn = processed_db.open_db(Path(args.db))
     print("Laddar alias-mappning via Prolog (IdentityResolver)...")
-    resolver = IdentityResolver(Path("merge.txt"), Path("similar_exclusions.txt"))
+    resolver = IdentityResolver(Path("merge.txt"), Path("similar_exclusions.txt"), db_path=Path(args.db))
 
     print("Laddar embeddings...")
     X, y = load_embeddings(Path(args.embeddings))

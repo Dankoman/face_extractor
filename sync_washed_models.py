@@ -10,6 +10,7 @@ from typing import Dict, Set, Tuple
 
 from PIL import Image
 from identity_resolver import IdentityResolver
+import processed_db
 
 # Standardinställningar
 DEFAULT_SOURCE_DIR = Path("/home/marqs/Bilder/Innie")
@@ -101,13 +102,40 @@ def get_image_count(directory: Path) -> int:
     return sum(1 for f in directory.iterdir() if f.is_file() and f.suffix.lower() in IMAGE_EXTENSIONS)
 
 
-def sync_person(source_folder: Path, primary_name: str, dry_run: bool, force_wipe: bool = False):
+def sync_person(source_folder: Path, primary_name: str, dry_run: bool, db_conn=None, min_size_kb: int = 40, force_wipe: bool = False):
     """Hantera flytt, rensning och konvertering för en person."""
     target_dir = PBOOK_DIR / primary_name
     
     # 1. Analysera befintliga bilder
     existing_images = [f for f in target_dir.iterdir() if f.is_file() and f.suffix.lower() in IMAGE_EXTENSIONS] if target_dir.exists() else []
-    small_images = [f for f in existing_images if f.stat().st_size <= 100 * 1024] # 100 KB
+    
+    # Hämta status från DB för befintliga bilder om vi har en anslutning
+    db_status = {}
+    if db_conn and existing_images:
+        # Optimering: Vi behöver bara veta om de är 'ok' eller inte
+        paths = [str(f) for f in existing_images]
+        # Vi kan inte använda is_processed direkt för en batch, men vi kan iterera eller göra en query
+        cur = db_conn.execute(f"SELECT path, ok FROM processed WHERE path IN ({','.join('?' for _ in paths)})", paths)
+        db_status = {Path(row[0]): bool(row[1]) for row in cur}
+
+    def is_junk(img_path: Path) -> bool:
+        size_kb = img_path.stat().st_size / 1024
+        
+        # Regel A: Riktigt små filer är ALLTID skräp (t.ex. < 40KB)
+        if size_kb < min_size_kb:
+            return True
+            
+        # Regel B: Om vi vet att pipelinen har misslyckats (ok=0)
+        # OCH den är under den gamla 100KB-gränsen, så är det skräp.
+        # Men om den är > 100KB sparar vi den ändå för framtida (bättre) detektorer.
+        if img_path in db_status:
+            is_ok = db_status[img_path]
+            if not is_ok and size_kb < 100:
+                return True
+        
+        return False
+
+    small_images = [f for f in existing_images if is_junk(f)]
     new_images = [f for f in source_folder.iterdir() if f.is_file() and f.suffix.lower() in IMAGE_EXTENSIONS]
 
     # 2. Beslut om rensning och Snapshot
@@ -130,7 +158,7 @@ def sync_person(source_folder: Path, primary_name: str, dry_run: bool, force_wip
             # Vi rensar ändå bort småfiler (skräp) för att höja kvaliteten.
             if small_images:
                 if not dry_run:
-                    print(f"🧹 Kvalitetsrens: Tar bort {len(small_images)} småbilder (<=100KB) i {target_dir}.", flush=True)
+                    print(f"🧹 Kvalitetsrens: Tar bort {len(small_images)} bilder som bedömts som skräp (<{min_size_kb}KB eller misslyckade <100KB) i {target_dir}.", flush=True)
                     for img in small_images:
                         img.unlink()
                 else:
@@ -183,6 +211,7 @@ def main():
     parser.add_argument("--source", type=str, help=f"Källmapp (standard: {DEFAULT_SOURCE_DIR})")
     parser.add_argument("--top", type=int, default=800, help="Antal modeller i analysen (standard: 800)")
     parser.add_argument("--min-samples", type=int, default=5, help="Gräns för vad som räknas som 'liten' mapp (standard: 5)")
+    parser.add_argument("--min-size", type=int, default=40, help="Minsta filstorlek i KB att behålla för oprocessade bilder (standard: 40)")
     args = parser.parse_args()
 
     # Prioritera positional argument om det finns, annars --source, annars default
@@ -208,39 +237,45 @@ def main():
         print(f"❌ Källmapp {source_dir} finns inte!")
         return
 
-    source_folders = sorted([d for d in source_dir.iterdir() if d.is_dir()])
+    # Öppna DB-anslutning för att kunna kolla bildstatus under synk
+    db_conn = processed_db.open_db(DB_PATH)
     
-    for folder in source_folders:
-        name = folder.name
-        primary = resolver.resolve(name)
-        dest_path = PBOOK_DIR / primary
+    try:
+        source_folders = sorted([d for d in source_dir.iterdir() if d.is_dir()])
         
-        # Filter-logik Version 4
-        is_flagged = (name in flagged_names) or (primary in flagged_names)
-        is_wipe = (name in wipe_candidates) or (primary in wipe_candidates)
-        is_new = not dest_path.exists()
-        
-        # Kolla om mappen är liten (färre än args.min_samples bilder)
-        pbook_count = get_image_count(dest_path)
-        is_small = (not is_new) and (pbook_count < args.min_samples)
-        
-        # Har skrapan faktiskt laddat ner något hit nyligen?
-        new_count = get_image_count(folder)
-        has_new_images = (new_count > 0)
-        
-        # Synka om: Flaggad, Ny, Liten, Har nya bilder, ELLER om --all är satt
-        if args.all or is_flagged or is_new or is_small or has_new_images:
-            reason = []
-            if args.all: reason.append("FORCE ALL")
-            if is_wipe: reason.append("FULL WIPE")
-            elif is_flagged: reason.append("FLAGGAD")
-            if is_new: reason.append("NY")
-            if is_small: reason.append(f"LITEN ({pbook_count} bilder)")
-            if has_new_images and not (args.all or is_flagged or is_new or is_small): 
-                reason.append(f"HAR NYA BILDER ({new_count})")
+        for folder in source_folders:
+            name = folder.name
+            primary = resolver.resolve(name)
+            dest_path = PBOOK_DIR / primary
             
-            print(f"\n📦 Bearbetar {name} -> {primary} ({', '.join(reason)})", flush=True)
-            sync_person(folder, primary, dry_run, force_wipe=is_wipe)
+            # Filter-logik Version 4
+            is_flagged = (name in flagged_names) or (primary in flagged_names)
+            is_wipe = (name in wipe_candidates) or (primary in wipe_candidates)
+            is_new = not dest_path.exists()
+            
+            # Kolla om mappen är liten (färre än args.min_samples bilder)
+            pbook_count = get_image_count(dest_path)
+            is_small = (not is_new) and (pbook_count < args.min_samples)
+            
+            # Har skrapan faktiskt laddat ner något hit nyligen?
+            new_count = get_image_count(folder)
+            has_new_images = (new_count > 0)
+            
+            # Synka om: Flaggad, Ny, Liten, Har nya bilder, ELLER om --all är satt
+            if args.all or is_flagged or is_new or is_small or has_new_images:
+                reason = []
+                if args.all: reason.append("FORCE ALL")
+                if is_wipe: reason.append("FULL WIPE")
+                elif is_flagged: reason.append("FLAGGAD")
+                if is_new: reason.append("NY")
+                if is_small: reason.append(f"LITEN ({pbook_count} bilder)")
+                if has_new_images and not (args.all or is_flagged or is_new or is_small): 
+                    reason.append(f"HAR NYA BILDER ({new_count})")
+                
+                print(f"\n📦 Bearbetar {name} -> {primary} ({', '.join(reason)})", flush=True)
+                sync_person(folder, primary, dry_run, db_conn=db_conn, min_size_kb=args.min_size, force_wipe=is_wipe)
+    finally:
+        db_conn.close()
 
     if dry_run:
         print("\n✨ Dry-run klar. Ingen skada skedd.", flush=True)

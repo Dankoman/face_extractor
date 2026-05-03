@@ -1,13 +1,16 @@
 import os
 import sys
+import sqlite3
 from pathlib import Path
+from typing import Optional, List, Dict, Tuple
 from pyswip import Prolog
 
 class IdentityResolver:
-    def __init__(self, merge_file: Path, exclusions_file: Path):
+    def __init__(self, merge_file: Path, exclusions_file: Path, db_path: Optional[Path] = None):
         self.prolog = Prolog()
-        self.merge_file = Path(merge_file)
-        self.exclusions_file = Path(exclusions_file)
+        self.merge_file = Path(merge_file) if merge_file else None
+        self.exclusions_file = Path(exclusions_file) if exclusions_file else None
+        self.db_path = Path(db_path) if db_path else None
         self.prolog_file = Path(__file__).parent / "identity.pl"
         
         # Load the Prolog rules
@@ -17,11 +20,11 @@ class IdentityResolver:
         self.load_data()
 
     def load_data(self):
-        """Parse text files and assert facts into Prolog."""
+        """Parse text files and database, then assert facts into Prolog."""
         seen_names = {} # name -> line_number
         
         # 1. Aliases from merge.txt
-        if self.merge_file.exists():
+        if self.merge_file and self.merge_file.exists():
             with open(self.merge_file, "r", encoding="utf-8") as f:
                 for line_num, line in enumerate(f, 1):
                     line = line.strip()
@@ -60,6 +63,30 @@ class IdentityResolver:
                         p1 = parts[0].replace("'", "\\'")
                         p2 = parts[1].replace("'", "\\'")
                         self.prolog.assertz(f"exclude('{p1}', '{p2}')")
+
+        # 3. Aliases from database (processed.db)
+        if self.db_path and self.db_path.exists():
+            try:
+                conn = sqlite3.connect(str(self.db_path))
+                # Hämta alias och primärnamn
+                cur = conn.execute("SELECT alias, primary_name FROM aliases")
+                db_aliases = cur.fetchall()
+                
+                primaries = set()
+                for alias, primary in db_aliases:
+                    alias_esc = alias.replace("'", "\\'")
+                    primary_esc = primary.replace("'", "\\'")
+                    
+                    self.prolog.assertz(f"link('{alias_esc}', '{primary_esc}')")
+                    primaries.add(primary_esc)
+                
+                # Sätt alla unika primärnamn som primary()
+                for p in primaries:
+                    self.prolog.assertz(f"primary('{p}')")
+                    
+                conn.close()
+            except Exception as e:
+                print(f"⚠️  WARNING: Could not load aliases from DB {self.db_path}: {e}", file=sys.stderr)
 
     def add_external_truth(self, alias: str, canonical: str, source: str):
         """Provide external truth (e.g. from StashDB)."""
