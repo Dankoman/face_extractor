@@ -190,7 +190,29 @@ def main() -> None:
     db_path = args.db
 
     conn = processed_db.open_db(db_path)
-    alias_map = processed_db.get_alias_map(conn)
+    raw_alias_map = processed_db.get_alias_map(conn)
+    
+    # Resolve alias chains and break cycles
+    alias_map: Dict[str, str] = {}
+    for start_node in raw_alias_map:
+        visited = []
+        current = start_node
+        while current in raw_alias_map and current not in visited:
+            visited.append(current)
+            current = raw_alias_map[current]
+        
+        if current in visited:
+            # Cycle detected. Sort the cycle alphabetically and pick the first as canonical.
+            cycle_start = visited.index(current)
+            cycle = visited[cycle_start:]
+            canonical = sorted(cycle, key=str.casefold)[0]
+            alias_map[start_node] = canonical
+        else:
+            alias_map[start_node] = current
+            
+    # Ta bort self-aliases (A -> A)
+    alias_map = {k: v for k, v in alias_map.items() if k != v}
+    
     existing_aliases = sorted([alias for alias in alias_map if (data_root / alias).is_dir()], key=str.casefold)
     stats = Stats(alias_dirs_found=len(existing_aliases))
 
