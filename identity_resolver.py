@@ -6,11 +6,15 @@ from typing import Optional, List, Dict, Tuple
 from pyswip import Prolog
 
 class IdentityResolver:
-    def __init__(self, merge_file: Path, exclusions_file: Path, db_path: Optional[Path] = None):
+    def __init__(self, exclusions_file: Path, db_path: Optional[Path] = None):
         self.prolog = Prolog()
-        self.merge_file = Path(merge_file) if merge_file else None
         self.exclusions_file = Path(exclusions_file) if exclusions_file else None
-        self.db_path = Path(db_path) if db_path else None
+        
+        if db_path is None:
+            self.db_path = Path(__file__).parent / "arcface_work-ppic" / "processed.db"
+        else:
+            self.db_path = Path(db_path)
+            
         self.prolog_file = Path(__file__).parent / "identity.pl"
         
         # Load the Prolog rules
@@ -23,32 +27,31 @@ class IdentityResolver:
         """Parse text files and database, then assert facts into Prolog."""
         seen_names = {} # name -> line_number
         
-        # 1. Aliases from merge.txt
-        if self.merge_file and self.merge_file.exists():
-            with open(self.merge_file, "r", encoding="utf-8") as f:
-                for line_num, line in enumerate(f, 1):
-                    line = line.strip()
-                    if not line or line.startswith("#"):
-                        continue
-                    parts = [p.strip() for p in line.split("|") if p.strip()]
-                    if not parts:
-                        continue
+        # 1. Aliases from database (processed.db)
+        if self.db_path and self.db_path.exists():
+            try:
+                conn = sqlite3.connect(str(self.db_path))
+                # Hämta alias och primärnamn
+                cur = conn.execute("SELECT alias, primary_name FROM aliases")
+                db_aliases = cur.fetchall()
+                
+                primaries = set()
+                for alias, primary in db_aliases:
+                    if alias == primary:
+                        continue # Skip self-aliases
+                    alias_esc = alias.replace("'", "\\'")
+                    primary_esc = primary.replace("'", "\\'")
                     
-                    # Validation: check for duplicates across groups
-                    for name in parts:
-                        if name in seen_names:
-                            print(f"⚠️  WARNING: '{name}' found on both line {seen_names[name]} and {line_num} in {self.merge_file.name}. This can cause inconsistent results!", file=sys.stderr)
-                        seen_names[name] = line_num
-
-                    # First name is considered the 'local primary'
-                    primary_name = parts[0].replace("'", "\\'")
-                    self.prolog.assertz(f"primary('{primary_name}')")
+                    self.prolog.assertz(f"link('{alias_esc}', '{primary_esc}')")
+                    primaries.add(primary_esc)
+                
+                # Sätt alla unika primärnamn som primary()
+                for p in primaries:
+                    self.prolog.assertz(f"primary('{p}')")
                     
-                    # Create bidirectional links
-                    for i in range(len(parts) - 1):
-                        p1 = parts[i].replace("'", "\\'")
-                        p2 = parts[i+1].replace("'", "\\'")
-                        self.prolog.assertz(f"link('{p1}', '{p2}')")
+                conn.close()
+            except Exception as e:
+                print(f"⚠️  WARNING: Could not load aliases from DB {self.db_path}: {e}", file=sys.stderr)
 
         # 2. Exclusions from similar_exclusions.txt
         # Format: Name1|Name2
@@ -64,29 +67,7 @@ class IdentityResolver:
                         p2 = parts[1].replace("'", "\\'")
                         self.prolog.assertz(f"exclude('{p1}', '{p2}')")
 
-        # 3. Aliases from database (processed.db)
-        if self.db_path and self.db_path.exists():
-            try:
-                conn = sqlite3.connect(str(self.db_path))
-                # Hämta alias och primärnamn
-                cur = conn.execute("SELECT alias, primary_name FROM aliases")
-                db_aliases = cur.fetchall()
-                
-                primaries = set()
-                for alias, primary in db_aliases:
-                    alias_esc = alias.replace("'", "\\'")
-                    primary_esc = primary.replace("'", "\\'")
-                    
-                    self.prolog.assertz(f"link('{alias_esc}', '{primary_esc}')")
-                    primaries.add(primary_esc)
-                
-                # Sätt alla unika primärnamn som primary()
-                for p in primaries:
-                    self.prolog.assertz(f"primary('{p}')")
-                    
-                conn.close()
-            except Exception as e:
-                print(f"⚠️  WARNING: Could not load aliases from DB {self.db_path}: {e}", file=sys.stderr)
+        # 2. Exclusions from similar_exclusions.txt
 
     def add_external_truth(self, alias: str, canonical: str, source: str):
         """Provide external truth (e.g. from StashDB)."""
@@ -155,5 +136,5 @@ class IdentityResolver:
 
 if __name__ == "__main__":
     # Quick test
-    resolver = IdentityResolver("merge.txt", "similar_exclusions.txt")
+    resolver = IdentityResolver("similar_exclusions.txt")
     print(f"Conflicts found: {resolver.check_conflicts()}")

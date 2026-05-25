@@ -17,7 +17,6 @@ import concurrent.futures
 import multiprocessing
 
 import processed_db
-from identity_resolver import IdentityResolver
 
 
 # load_alias_map ersatt av processed_db.get_alias_map()
@@ -281,7 +280,7 @@ def generate_recommendation(row: Dict, m_a: Dict, m_b: Optional[Dict]) -> str:
             # Mycket lika namn
             recs.append(
                 f"Namnen är nästan identiska – troligen samma person. "
-                f"→ MERGE: Slå ihop '{person_a}' och '{person_b}' i merge.txt."
+                f"→ MERGE: Slå ihop '{person_a}' och '{person_b}' i to_be_merged.csv."
             )
         elif row["confusion_dist"] < 0.15:
             # Extremt nära embeddings
@@ -377,28 +376,27 @@ def main() -> None:
 
     print("Laddar databas...")
     conn = processed_db.open_db(Path(args.db))
-    print("Laddar alias-mappning via Prolog (IdentityResolver)...")
-    resolver = IdentityResolver(Path("merge.txt"), Path("similar_exclusions.txt"), db_path=Path(args.db))
+    print("Laddar alias-mappning från DB...")
+    alias_map = processed_db.get_resolved_alias_map(conn)
 
     print("Laddar embeddings...")
     X, y = load_embeddings(Path(args.embeddings))
     # Upplös alias till primärnamn
-    print(f"  Upplöser {len(set(y))} unika namn via Prolog...")
-    alias_map = resolver.resolve_many(list(set(y)))
+    print(f"  Upplöser {len(set(y))} unika namn via DB...")
     y = [alias_map.get(label, label) for label in y]
     print(f"  {len(X)} embeddings, {len(set(y))} unika personer")
 
     print("Laddar processed-statistik...")
     proc_stats = processed_db.get_stats_by_person(conn)
     conn.close()
+    
     # Upplös alias i processed-stats också
     print("  Upplöser namn i statistik...")
     resolved_stats: Dict[str, Dict] = defaultdict(lambda: {"total": 0, "ok": 0, "fail": 0, "reasons": defaultdict(int)})
     stat_names = list(proc_stats.keys())
-    alias_map_stats = resolver.resolve_many(stat_names)
     
     for person, ps in proc_stats.items():
-        primary = alias_map_stats.get(person, person)
+        primary = alias_map.get(person, person)
         resolved_stats[primary]["total"] += ps["total"]
         resolved_stats[primary]["ok"] += ps["ok"]
         resolved_stats[primary]["fail"] += ps["fail"]

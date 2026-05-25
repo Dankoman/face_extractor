@@ -9,6 +9,7 @@ from rich.progress import Progress
 # Import our new modules
 from external_resolver import ExternalIdentityResolver
 from identity_resolver import IdentityResolver
+import processed_db
 
 console = Console()
 
@@ -17,25 +18,28 @@ def main():
     
     # Files
     face_extractor_dir = Path(__file__).parent
-    merge_file = face_extractor_dir / "merge.txt"
+    db_path = face_extractor_dir / "arcface_work-ppic" / "processed.db"
     exclusions_file = face_extractor_dir / "similar_exclusions.txt"
     
-    if not merge_file.exists():
-        console.print(f"[red]Fel: {merge_file} hittades inte.[/red]")
+    if not db_path.exists():
+        console.print(f"[red]Fel: {db_path} hittades inte.[/red]")
         return
 
     # 1. Initialize Resolvers
-    resolver = IdentityResolver(merge_file, exclusions_file)
+    resolver = IdentityResolver(exclusions_file, db_path=db_path)
     external = ExternalIdentityResolver()
     
-    # 2. Extract uniquely mentioned names from merge.txt to verify them externally
+    # 2. Extract uniquely mentioned names from DB to verify them externally
     all_names = set()
-    with open(merge_file, "r", encoding="utf-8") as f:
-        for line in f:
-            parts = [p.strip() for p in line.split("|") if p.strip()]
-            all_names.update(parts)
+    conn = processed_db.open_db(db_path)
+    alias_map = processed_db.get_alias_map(conn)
+    conn.close()
     
-    console.print(f"Hittade {len(all_names)} unika namn i merge.txt.")
+    for alias, primary in alias_map.items():
+        all_names.add(alias)
+        all_names.add(primary)
+    
+    console.print(f"Hittade {len(all_names)} unika namn i DB.")
     console.print("[yellow]Kontrollerar namn mot StashDB/ThePornDB (detta kan ta tid vid första körning pga cache-populering)...[/yellow]")
     
     # 3. Resolve names externally and feed into Prolog
@@ -46,7 +50,7 @@ def main():
             res = external.resolve(name)
             if res:
                 canonical, source = res
-                resolver.add_external_truth(name, canonical, source)
+                # external_resolver caches it automatically
                 # Only log hits to avoid terminal spam, but show where they come from
                 if not external._get_from_cache(name): # If it wasn't already in cache before this resolve
                      console.log(f"[green]Träff![/green] {name} -> [bold]{canonical}[/bold] ({source})")
@@ -103,7 +107,7 @@ def main():
             
     # Let's list some recommendations
     recommendations_table = Table(title="Rekommenderade Uppdateringar", show_header=True)
-    recommendations_table.add_column("Namn i merge.txt")
+    recommendations_table.add_column("Namn i DB")
     recommendations_table.add_column("Föreslaget Huvudnamn (Källa)")
     
     count = 0
@@ -115,7 +119,7 @@ def main():
             # so let's just show top 20 interesting ones.
             pass
 
-    console.print("[blue]Tips: Kör med --fix (ej implementerat än) för att automatiskt uppdatera merge.txt[/blue]")
+    console.print("[blue]Tips: Använd to_be_merged.csv för att uppdatera DB[/blue]")
 
 if __name__ == "__main__":
     main()

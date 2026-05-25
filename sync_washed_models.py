@@ -9,14 +9,12 @@ from pathlib import Path
 from typing import Dict, Set, Tuple
 
 from PIL import Image
-from identity_resolver import IdentityResolver
 import processed_db
 
 # Standardinställningar
 DEFAULT_SOURCE_DIR = Path("/home/marqs/Bilder/Innie")
 PBOOK_DIR = Path("/home/marqs/Bilder/pBook")
 BACKUP_DIR = Path("/home/marqs/Bilder/pBook_backups")
-MERGE_FILE = Path("/home/marqs/Programmering/Python/3.11/face_extractor/merge.txt")
 UNCERTAINTY_SCRIPT = Path("/home/marqs/Programmering/Python/3.11/face_extractor/model_uncertainty.py")
 DB_PATH = Path("/home/marqs/Programmering/Python/3.11/face_extractor/arcface_work-ppic/processed.db")
 EMB_PATH = Path("/home/marqs/Programmering/Python/3.11/face_extractor/arcface_work-ppic/embeddings_ppic.pkl")
@@ -142,29 +140,19 @@ def sync_person(source_folder: Path, primary_name: str, dry_run: bool, db_conn=N
     if existing_images:
         create_btrfs_snapshot(target_dir, BACKUP_DIR, primary_name, dry_run)
         
-        # FULL WIPE sker om force_wipe (blandade identiteter) är satt
-        # ELLER endast om BÅDA mapparna är stora (>= 20 bilder).
-        should_wipe_all = force_wipe or ((len(existing_images) >= 20) and (len(new_images) >= 20))
+        # WIPE LOGIK HAR TAGITS BORT! cluster_cleaner.py i run_cleanup_pipeline.fish hanterar varians nu.
         
-        if should_wipe_all:
+        # MERGE-läge: Vi vill att mappen ska växa.
+        # Vi rensar ändå bort småfiler (skräp) för att höja kvaliteten.
+        if small_images:
             if not dry_run:
-                print(f"🧹 Rensar ALLA ({len(existing_images)}) bilder i {target_dir} (Fullständig tvätt)...", flush=True)
-                for img in existing_images:
+                print(f"🧹 Kvalitetsrens: Tar bort {len(small_images)} bilder som bedömts som skräp (<{min_size_kb}KB eller misslyckade <100KB) i {target_dir}.", flush=True)
+                for img in small_images:
                     img.unlink()
             else:
-                print(f"DRY-RUN: Skulle ha rensat ALLA {len(existing_images)} bilder i {target_dir}", flush=True)
-        else:
-            # MERGE-läge: Vi vill att mappen ska växa.
-            # Vi rensar ändå bort småfiler (skräp) för att höja kvaliteten.
-            if small_images:
-                if not dry_run:
-                    print(f"🧹 Kvalitetsrens: Tar bort {len(small_images)} bilder som bedömts som skräp (<{min_size_kb}KB eller misslyckade <100KB) i {target_dir}.", flush=True)
-                    for img in small_images:
-                        img.unlink()
-                else:
-                    print(f"DRY-RUN: Skulle ha rensat {len(small_images)} småbilder i {target_dir}", flush=True)
-            
-            print(f"ℹ️ Mergar in {len(new_images)} bilder från källmappen till {len(existing_images) - len(small_images)} befintliga stora bilder i pBook.", flush=True)
+                print(f"DRY-RUN: Skulle ha rensat {len(small_images)} småbilder i {target_dir}", flush=True)
+        
+        print(f"ℹ️ Mergar in {len(new_images)} bilder från källmappen till {len(existing_images) - len(small_images)} befintliga stora bilder i pBook.", flush=True)
     else:
         if not dry_run:
             target_dir.mkdir(parents=True, exist_ok=True)
@@ -223,7 +211,7 @@ def main():
         print("🚀 KÖR I DRY-RUN LÄGE (inga filer ändras)")
         print("Använd --confirm för att faktiskt flytta filer.\n")
 
-    resolver = IdentityResolver(MERGE_FILE, SIMILAR_EXCLUSIONS)
+    # Resolver ersätts längre ner av databasen
     
     report_file = "sync_pipeline_report.csv"
     if not args.skip_analysis:
@@ -241,11 +229,12 @@ def main():
     db_conn = processed_db.open_db(DB_PATH)
     
     try:
+        alias_map = processed_db.get_resolved_alias_map(db_conn)
         source_folders = sorted([d for d in source_dir.iterdir() if d.is_dir()])
         
         for folder in source_folders:
             name = folder.name
-            primary = resolver.resolve(name)
+            primary = alias_map.get(name, name)
             dest_path = PBOOK_DIR / primary
             
             # Filter-logik Version 4

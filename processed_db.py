@@ -47,6 +47,21 @@ def get_alias_map(conn: sqlite3.Connection) -> Dict[str, str]:
     return {row[0]: row[1] for row in cur}
 
 
+def get_resolved_alias_map(conn: sqlite3.Connection) -> Dict[str, str]:
+    """Hämta alias-map med fullständig kedje-upplösning (A→B→C ger A→C, B→C)."""
+    raw = get_alias_map(conn)
+    resolved = {}
+    for alias in raw:
+        visited = set()
+        current = alias
+        while current in raw and current not in visited:
+            visited.add(current)
+            current = raw[current]
+        if current != alias:
+            resolved[alias] = current
+    return resolved
+
+
 def resolve_name(conn: sqlite3.Connection, name: str) -> str:
     """Slå upp ett namn och returnera dess primärnamn (eller namnet självt)."""
     cur = conn.execute("SELECT primary_name FROM aliases WHERE alias = ?", (name,))

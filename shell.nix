@@ -53,7 +53,7 @@ pkgs.mkShell {
 
     VENV_PYTHON="./.venv/bin/python3"
     SYS_PYTHON_VER=$(python3 --version)
-    PIP_PKGS="onnxruntime insightface opencv-python-headless==4.12.0.88 numpy scipy scikit-learn scikit-image tqdm pillow flask flask-cors rich pyswip albumentations requests packaging"
+    PIP_PKGS="onnxruntime insightface opencv-python-headless==4.12.0.88 numpy scipy scikit-learn scikit-image tqdm pillow flask flask-cors rich pyswip albumentations requests packaging imagehash"
     PIP_PKGS_HASH=$(echo "$PIP_PKGS" | sha256sum | cut -d' ' -f1)
     
     # Smart check: Re-run setup if venv missing, python changed, or dependencies changed

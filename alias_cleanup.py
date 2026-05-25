@@ -57,6 +57,12 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Optional path where missing DB entries should be logged (and removed if --prune-missing is set).",
     )
+    parser.add_argument(
+        "--affected-dirs-log",
+        type=Path,
+        default=None,
+        help="Optional path to log the names of main directories that had files moved to them.",
+    )
     return parser.parse_args()
 
 
@@ -238,11 +244,15 @@ def main() -> None:
                 stats.main_dirs_normalized += 1
 
     move_map: Dict[str, str] = {}
+    affected_dirs = set()
     for alias in existing_aliases:
         main = alias_map.get(alias)
         if not main:
             continue
+        before_moved = stats.files_moved
         move_alias_files(data_root / alias, data_root / main, move_map, stats)
+        if stats.files_moved > before_moved:
+            affected_dirs.add(main)
 
     conn = processed_db.open_db(db_path)
     update_db(conn, rename_map, move_map, stats)
@@ -251,6 +261,12 @@ def main() -> None:
 
     if args.prune_missing or args.missing_log:
         prune_missing_entries(conn, stats, args.missing_log)
+
+    if args.affected_dirs_log:
+        if affected_dirs:
+            args.affected_dirs_log.write_text("\n".join(sorted(affected_dirs)))
+        elif args.affected_dirs_log.exists():
+            args.affected_dirs_log.unlink()
 
     conn.close()
     print(json.dumps(stats.as_dict(), ensure_ascii=False, indent=2))

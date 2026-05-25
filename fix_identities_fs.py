@@ -12,7 +12,6 @@ from rich.prompt import Confirm
 from rich.progress import Progress
 
 import processed_db
-from identity_resolver import IdentityResolver
 from external_resolver import ExternalIdentityResolver
 
 console = Console()
@@ -23,7 +22,6 @@ def parse_args():
     parser.add_argument("--db", required=True, type=Path, help="Sökväg till processed.db.")
     parser.add_argument("--embeddings", type=Path, help="Valfri sökväg till embeddings_ppic.pkl för att uppdatera labels.")
     parser.add_argument("--apply", action="store_true", help="Utför faktiska ändringar (standard är Dry Run).")
-    parser.add_argument("--merge-txt", default="merge.txt", type=Path)
     parser.add_argument("--exclusions-txt", default="similar_exclusions.txt", type=Path)
     parser.add_argument("--yes", action="store_true", help="Svara ja på alla bekräftelser (för automatisering).")
     parser.add_argument("--only-new", action="store_true", help="Kolla ENDAST mappar som inte redan existerar i processed.db")
@@ -77,8 +75,8 @@ def main():
         console.print(f"[red]Fel: Databasen {db_path} hittades inte.[/red]")
         return
 
-    # 1. Initiera Resolvers
-    resolver = IdentityResolver(args.merge_txt, args.exclusions_txt)
+    conn = processed_db.open_db(db_path)
+    alias_map = processed_db.get_resolved_alias_map(conn)
     external = ExternalIdentityResolver()
     
     # 2. Skanna mappar och hämta externa sanningar
@@ -110,7 +108,8 @@ def main():
             res = external.resolve(original_name)
             if res:
                 canonical, source = res
-                resolver.add_external_truth(original_name, canonical, source)
+                # We can't use resolver.add_external_truth anymore
+                # But external.resolve already caches it. We just use it directly.
             
             progress.update(task, advance=1)
 
@@ -118,7 +117,13 @@ def main():
     actions = [] # list of (old_name, new_name, action_type)
     for d in performer_dirs:
         original_name = d.name
-        canonical_name = resolver.resolve(original_name)
+        # First check external, then local DB aliases
+        canonical_name = original_name
+        ext_res = external.resolve(original_name)
+        if ext_res:
+            canonical_name = ext_res[0]
+        else:
+            canonical_name = alias_map.get(original_name, original_name)
         
         if original_name != canonical_name:
             target_path = data_root / canonical_name
@@ -204,6 +209,8 @@ def main():
     except Exception as e:
         console.print(f"\n[bold red]Ett fel uppstod: {e}[/bold red]")
         console.print("[yellow]Kontrollera backupen av databasen om något gick fel.[/yellow]")
+        # conn.close() was already closed or kept open. We close it here if it's still open.
+        pass
     finally:
         conn.close()
 

@@ -122,20 +122,29 @@ def init_app(providers: List[str]) -> FaceAnalysis:
 # load_processed / append_processed ersatta av processed_db-modulen
 
 
-def load_embeddings(emb_path: Path) -> Tuple[List[np.ndarray], List[str]]:
+def load_embeddings(emb_path: Path) -> Tuple[List[np.ndarray], List[str], List[str]]:
     if not emb_path.exists():
-        return [], []
+        return [], [], []
     with emb_path.open("rb") as f:
         data = pickle.load(f)
-    return data["X"], data["y"]
+    
+    X = data["X"]
+    y = data["y"]
+    paths = data.get("paths", [])
+    
+    # Pad paths with None for old embeddings
+    if len(paths) < len(X):
+        paths = paths + [None] * (len(X) - len(paths))
+        
+    return X, y, paths
 
 
-def save_embeddings(emb_path: Path, X, y):
+def save_embeddings(emb_path: Path, X, y, paths):
     emb_path = Path(emb_path)
     emb_path.parent.mkdir(parents=True, exist_ok=True)
     tmp = emb_path.with_suffix(".tmp")
     with tmp.open("wb") as f:
-        pickle.dump({"X": X, "y": y}, f)
+        pickle.dump({"X": X, "y": y, "paths": paths}, f)
     tmp.rename(emb_path)
 
 
@@ -434,7 +443,7 @@ def encode(args) -> None:
     workdir = Path(args.workdir); workdir.mkdir(parents=True, exist_ok=True)
     emb_path = workdir/EMB_PKL
     db_path = workdir/PROC_DB
-    X,y = load_embeddings(emb_path)
+    X,y,paths_lst = load_embeddings(emb_path)
     conn = processed_db.open_db(db_path)
     alias_map = processed_db.get_alias_map(conn)
     processed = processed_db.load_processed_set(conn)
@@ -448,12 +457,12 @@ def encode(args) -> None:
     app=init_app(["CPUExecutionProvider"]); rec_model=app.models["recognition"]
     
     if args.ui and HAS_RICH:
-        run_encode_rich(todo, app, rec_model, conn, X, y, emb_path, args)
+        run_encode_rich(todo, app, rec_model, conn, X, y, paths_lst, emb_path, args)
     else:
-        run_encode_tqdm(todo, app, rec_model, conn, X, y, emb_path, args)
+        run_encode_tqdm(todo, app, rec_model, conn, X, y, paths_lst, emb_path, args)
 
 
-def run_encode_tqdm(todo, app, rec_model, conn, X, y, emb_path, args):
+def run_encode_tqdm(todo, app, rec_model, conn, X, y, paths_lst, emb_path, args):
     try:
         pbar = tqdm(todo, unit="img")
         for path, label in pbar:
@@ -477,19 +486,20 @@ def run_encode_tqdm(todo, app, rec_model, conn, X, y, emb_path, args):
                 if ok:
                     X.append(emb)
                     y.append(label)
+                    paths_lst.append(path)
             except Exception as e:
                 reason="exception"
                 print(f"❌ {path}: {e}",file=sys.stderr)
             processed_db.add_processed(conn, path, ok, reason)
             if ok and len(X)%args.flush_every==0:
-                save_embeddings(emb_path,X,y)
+                save_embeddings(emb_path,X,y,paths_lst)
     except KeyboardInterrupt:
         print("\n⏹️ Avbrutet. Sparar state...")
     finally:
-        save_embeddings(emb_path,X,y)
+        save_embeddings(emb_path,X,y,paths_lst)
 
 
-def run_encode_rich(todo, app, rec_model, conn, X, y, emb_path, args):
+def run_encode_rich(todo, app, rec_model, conn, X, y, paths_lst, emb_path, args):
     console = Console()
     progress = Progress(
         SpinnerColumn(),
@@ -586,6 +596,7 @@ def run_encode_rich(todo, app, rec_model, conn, X, y, emb_path, args):
                     if ok:
                         X.append(emb)
                         y.append(label)
+                        paths_lst.append(path)
                 except Exception as e:
                     reason = f"error: {str(e)[:40]}"
                 
@@ -598,12 +609,12 @@ def run_encode_rich(todo, app, rec_model, conn, X, y, emb_path, args):
                 update_ui(label, path, preview_content, live_obj=live)
                 
                 if ok and len(X) % args.flush_every == 0:
-                    save_embeddings(emb_path, X, y)
+                    save_embeddings(emb_path, X, y, paths_lst)
                     
         except KeyboardInterrupt:
             console.print("\n[bold yellow]⏹️ Avbrutet av användare. Sparar...[/bold yellow]")
         finally:
-            save_embeddings(emb_path, X, y)
+            save_embeddings(emb_path, X, y, paths_lst)
         conn.close()
         print(f"💾 Sparade embeddings ({len(X)}) till {emb_path}")
 
@@ -619,7 +630,7 @@ def train(args) -> None:
         print(f"❌ Embeddings-filen hittades inte: {emb_path}"); sys.exit(1)
 
     # Ladda embeddings
-    X_list, y_list = load_embeddings(emb_path)
+    X_list, y_list, _ = load_embeddings(emb_path)
     if not X_list:
         print("❌ Inga embeddings – kör encode först."); sys.exit(1)
 
